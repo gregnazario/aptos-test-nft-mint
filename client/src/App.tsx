@@ -21,7 +21,8 @@ function App(this: any) {
     const [tokenAddress, setTokenAddress] = useState<string>("");
     const [listingAddress, setListingAddress] = useState<string>("");
     const [listingPrice, setListingPrice] = useState<string>("100000000");
-    const [transactions, setTransactions] = useState<{ hash: string, type: string, data: string | undefined }[]>([]);
+    const [numTransaction, setNumTransaction] = useState<number>(0);
+    const [transactions, setTransactions] = useState<{ num: number, hash: string, type: string, data: string }[]>([]);
     const {account, network, connected, signAndSubmitTransaction} = useWallet();
     const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
         const val = event.target.value;
@@ -29,8 +30,10 @@ function App(this: any) {
     }
     const addToTransactions = async (type: string, hash: string, data: string) => {
         const txns = transactions;
-        txns.push({hash: hash, type: type, data: data});
+        const num = numTransaction;
+        txns.push({num: num, hash: hash, type: type, data: data});
         setTransactions(txns);
+        setNumTransaction(num + 1);
     }
 
     const createFeeSchedule = async () => {
@@ -133,6 +136,7 @@ function App(this: any) {
         };
         let txn = await runTransaction(type, payload);
         if (txn !== undefined) {
+            console.log(`TXN: ${JSON.stringify(txn.events[0].data.token)}`);
             await addToTransactions(type, txn.hash, `TokenAddress: ${txn.events[0].data.token}`);
         }
     }
@@ -159,7 +163,7 @@ function App(this: any) {
                 }
             }
 
-            await addToTransactions(type, txn.hash, address);
+            await addToTransactions(type, txn.hash, `Listing address: ${address}`);
         }
     }
 
@@ -175,7 +179,7 @@ function App(this: any) {
         };
         let txn = await runTransaction(type, payload);
         if (txn !== undefined) {
-            await addToTransactions(type, txn.hash, JSON.stringify(txn.changes));
+            await addToTransactions(type, txn.hash, "");
         }
     }
     const purchaseListing = async () => {
