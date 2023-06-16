@@ -1,0 +1,11 @@
+[package]
+name = 'test-token'
+version = '1.0.0'
+
+[addresses]
+deploy_account = "_"
+
+[dependencies]
+AptosFramework = { git = 'https://github.com/aptos-labs/aptos-core.git', rev = 'devnet', subdir = 'aptos-move/framework/aptos-framework' }
+AptosToken = { git = 'https://github.com/aptos-labs/aptos-core.git', rev = 'devnet', subdir = 'aptos-move/framework/aptos-token' }
+AptosTokenObjects = { git = 'https://github.com/aptos-labs/aptos-core.git', rev = 'devnet', subdir = 'aptos-move/framework/aptos-token-objects' }
