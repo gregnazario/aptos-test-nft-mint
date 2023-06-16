@@ -1,7 +1,7 @@
 # Let's not use the "netlify" domain
 [[redirects]]
-  from = "https://aptos-tic-tac-toe.netlify.app"
-  to = "https://gnazar.io"
+  from = "https://gnazario-nft-playground.netlify.app"
+  to = "https://nft-playground.gnazar.io"
   status = 301
   force = true
 
