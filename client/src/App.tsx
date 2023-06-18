@@ -1,14 +1,12 @@
 import {Alert, Button, Col, Input, Layout, Row} from "antd";
 import {WalletSelector} from "@aptos-labs/wallet-adapter-ant-design";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
-import {AptosClient} from "aptos";
+import {Network, Provider} from "aptos";
 import {useWallet} from "@aptos-labs/wallet-adapter-react";
 import {useState} from "react";
 
-// TODO: Load URL from wallet
-export const NODE_URL = "https://fullnode.devnet.aptoslabs.com";
-export const client = new AptosClient(NODE_URL);
-
+// TODO: Load network from wallet
+export const DEVNET_PROVIDER = new Provider(Network.DEVNET)
 
 // TODO: make this more accessible / be deployed by others?
 export const moduleAddress = "0xb11affd5c514bb969e988710ef57813d9556cc1e3fe6dc9aa6a82b56aee53d98";
@@ -17,6 +15,7 @@ function App(this: any) {
     // TODO Consolidate a lot of these
     const [collectionName, setCollectionName] = useState<string>("Test Collection");
     const [tokenName, setTokenName] = useState<string>("Test Token #1");
+    const [tokenUri, setTokenUri] = useState<string>("https://aptosfoundation.org/brandbook/logomark/PNG/Aptos_mark_BLK.png");
     const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>("0x62667005ef3a71fe5603a006d68805b55fb141b9a381237b0bca6996a22760da");
     const [tokenAddress, setTokenAddress] = useState<string>("");
     const [listingAddress, setListingAddress] = useState<string>("");
@@ -25,6 +24,10 @@ function App(this: any) {
     const [destinationAddress, setDestinationAddress] = useState<string>("");
     const [numTransaction, setNumTransaction] = useState<number>(0);
     const [transactions, setTransactions] = useState<{ num: number, hash: string, type: string, data: string }[]>([]);
+    const [wallet, setWallet] = useState<{
+        name: string,
+        tokens: { collection: string, name: string, data_id: string, uri: string, type: string }[]
+    }>();
     const {account, network, connected, signAndSubmitTransaction} = useWallet();
     const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
         const val = event.target.value;
@@ -106,9 +109,25 @@ function App(this: any) {
         const type = "Create V2 Collection";
         const payload = {
             type: "entry_function_payload",
-            function: `${moduleAddress}::test_token::create_v2_collection`,
+            function: `0x4::aptos_token::create_collection`,
             type_arguments: [],
-            arguments: [collectionName],
+            arguments: [
+                "Test v2 collection", // Description
+                10000, // Maximum supply
+                collectionName,
+                "https://aptosfoundation.org/brandbook/logomark/PNG/Aptos_mark_WHT.png",// collection URI
+                true, // These are all mutable
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                1, // Royalty numerator
+                100, // Royalty denominator
+            ],
         };
 
         let txn = await runTransaction(type, payload);
@@ -128,13 +147,21 @@ function App(this: any) {
 
     const createV2Token = async () => {
         // Ensure you're logged in
-        if (!account || !collectionName || !tokenName) return [];
+        if (!account || !collectionName || !tokenName || !tokenUri) return [];
         const type = "Create V2 Token";
         const payload = {
             type: "entry_function_payload",
-            function: `${moduleAddress}::test_token::create_v2_nft`,
+            function: `0x4::aptos_token::mint`,
             type_arguments: [],
-            arguments: [collectionName, tokenName],
+            arguments: [
+                collectionName,
+                "Test v2 token", // Description
+                tokenName,
+                tokenUri,
+                [],
+                [],
+                []
+            ],
         };
         let txn = await runTransaction(type, payload);
         if (txn !== undefined) {
@@ -220,13 +247,63 @@ function App(this: any) {
         try {
             const response = await signAndSubmitTransaction(payload);
             console.log(`${type}: ${response.hash}`);
-            await client.waitForTransaction(response.hash);
-            return await client.getTransactionByHash(response.hash) as any;
+            await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
+            return await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
         } catch (error: any) {
             console.log("Failed to wait for txn" + error)
         }
 
         return undefined;
+    }
+
+    const showWallet = async () => {
+        // Ensure you're logged in
+        if (!account) {
+            return {name: "Wallet not connected", nfts: []};
+        }
+
+        try {
+            /*
+            let accountName = await ANS_CLIENT.getPrimaryNameByAddress(account.address);
+            if (!accountName) {
+                accountName = account.address;
+            }*/
+            let tokens_query = await DEVNET_PROVIDER.indexerClient.getOwnedTokens(account.address);
+
+            let tokens = tokens_query.current_token_ownerships_v2.map(token_data => {
+                if (token_data.token_standard === "v2") {
+                    let collection_name = token_data.current_token_data?.current_collection?.collection_name || "";
+                    let name = token_data.current_token_data?.token_name || "";
+                    let data_id = token_data.current_token_data?.token_data_id || "";
+                    let uri = token_data.current_token_data?.token_uri || "";
+                    let type = "NFT"
+                    if (token_data.is_soulbound_v2 && token_data.is_fungible_v2) {
+                        type = "Soulbound Fungible Token";
+                    } else if (token_data.is_soulbound_v2) {
+                        type = "Soulbound NFT";
+                    } else if (token_data.is_fungible_v2) {
+                        // Fungible will also skip for now in this demo
+                        type = "Fungible Token";
+                    }
+                    return {collection: collection_name, name: name, data_id: data_id, uri: uri, type: type}
+                } else {
+                    // Handle V1
+                    let collection_name = token_data.current_token_data?.current_collection?.collection_name || "";
+                    let name = token_data.current_token_data?.token_name || "";
+                    let data_id = token_data.current_token_data?.token_data_id || "";
+                    let uri = token_data.current_token_data?.token_uri || "";
+                    let type = "NFT" // TODO: Handle fungible
+                    return {collection: collection_name, name: name, data_id: data_id, uri: uri, type: type}
+                }
+            })
+
+            setWallet({name: account.address, tokens: tokens})
+            return
+        } catch (error: any) {
+            console.log("Failed to load wallet" + error)
+        }
+
+        setWallet({name: "Unable to load wallet", tokens: []})
     }
 
     return (
@@ -307,6 +384,22 @@ function App(this: any) {
                                                 placeholder="Token Name"
                                                 size="large"
                                                 defaultValue={"Test Token #1"}
+                                            />
+                                        </Col>
+                                    </Row>
+                                    <Row align="middle">
+                                        <Col span={4}>
+                                            <p>Token name:</p>
+                                        </Col>
+                                        <Col flex={"auto"}>
+                                            <Input
+                                                onChange={(event) => {
+                                                    onStringChange(event, setTokenUri)
+                                                }}
+                                                style={{width: "calc(100% - 60px)"}}
+                                                placeholder="Token URI"
+                                                size="large"
+                                                defaultValue={"https://aptosfoundation.org/brandbook/logomark/PNG/Aptos_mark_BLK.png"}
                                             />
                                         </Col>
                                     </Row>
@@ -471,8 +564,6 @@ function App(this: any) {
                             </Row>
                             <Row align="middle">
                                 <Col flex={"auto"} offset={2}>
-                                    <h1>"NFT Wallet"</h1>
-                                    <p>TODO: Add listing owned tokens</p>
                                     <Row align={"middle"}>
                                         <Col span={4}>
                                             <h3>Transfer Object</h3>
@@ -525,16 +616,41 @@ function App(this: any) {
                             </Row>
                         </Col>
                         <Col span={12}>
-                            <h2>Transaction Log</h2>
-                            <p>This keeps track of all the transactions that have occurred, but there's no cookies or
-                                lookup, so page refreshes will make it disappear
-                                TODO: Load recent transactions from API
-                            </p>
-                            <ol>
-                                {transactions.map(({hash, type, data}) => <li>{type} - <a
-                                    href={`https://explorer.aptoslabs.com/txn/${hash}?network=devnet`}>{hash}</a> - {data}
-                                </li>)}
-                            </ol>
+                            <Row>
+                                <h2>Wallet {wallet?.name}</h2>
+                            </Row>
+                            <Row>
+                                <p>TODO load automatically</p>
+                                <Button
+                                    onClick={() => showWallet()}
+                                    type="primary"
+                                    style={{height: "40px", backgroundColor: "#3f67ff"}}
+                                >
+                                    Load wallet
+                                </Button>
+                            </Row>
+                            <Row>
+                                <ol>
+                                    {wallet?.tokens.map(({collection, name, data_id, uri, type}) =>
+                                        <li>{type} | {'"' + collection + "'"} - {'"' + name + '"'} <img width={50}
+                                                                                                        src={uri}
+                                                                                                        alt={"img"}/> - {data_id}
+                                        </li>)}
+                                </ol>
+                            </Row>
+                            <Row>
+                                <h2>Transaction Log</h2>
+                                <p>This keeps track of all the transactions that have occurred, but there's no cookies
+                                    or
+                                    lookup, so page refreshes will make it disappear
+                                    TODO: Load recent transactions from API
+                                </p>
+                                <ol>
+                                    {transactions.map(({hash, type, data}) => <li>{type} - <a
+                                        href={`https://explorer.aptoslabs.com/txn/${hash}?network=devnet`}>{hash}</a> - {data}
+                                    </li>)}
+                                </ol>
+                            </Row>
                         </Col>
                     </Row>
                 </>
