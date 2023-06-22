@@ -16,7 +16,7 @@ function App(this: any) {
     const [collectionName, setCollectionName] = useState<string>("Test Collection");
     const [tokenName, setTokenName] = useState<string>("Test Token #1");
     const [tokenUri, setTokenUri] = useState<string>("https://aptosfoundation.org/brandbook/logomark/PNG/Aptos_mark_BLK.png");
-    const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>("0x62667005ef3a71fe5603a006d68805b55fb141b9a381237b0bca6996a22760da");
+    const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>("0x5640348ea9c52a2a6e173fc6c884122a1025266b664064af1a8168813899317a");
     const [tokenAddress, setTokenAddress] = useState<string>("");
     const [listingAddress, setListingAddress] = useState<string>("");
     const [listingPrice, setListingPrice] = useState<string>("100000000");
@@ -488,7 +488,7 @@ function App(this: any) {
                                                 }}
                                                 placeholder="Fee Schedule Address"
                                                 size="large"
-                                                defaultValue={"0x62667005ef3a71fe5603a006d68805b55fb141b9a381237b0bca6996a22760da"}
+                                                defaultValue={"0x5640348ea9c52a2a6e173fc6c884122a1025266b664064af1a8168813899317a"}
                                             />
                                         </Col>
                                     </Row>
