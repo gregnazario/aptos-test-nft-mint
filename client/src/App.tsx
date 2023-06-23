@@ -10,12 +10,13 @@ export const DEVNET_PROVIDER = new Provider(Network.DEVNET)
 
 // TODO: make this more accessible / be deployed by others?
 export const moduleAddress = "0xb11affd5c514bb969e988710ef57813d9556cc1e3fe6dc9aa6a82b56aee53d98";
+const DEFAULT_IMAGE = "https://3zglr2262zd6f45qo6nqfycybj4acwnughgzual3oxdmu7wlz36a.arweave.net/3ky4617WR-LzsHebAuBYCngBWbQxzZoBe3XGyn7Lzvw/0.png"
 
 function App(this: any) {
     // TODO Consolidate a lot of these
     const [collectionName, setCollectionName] = useState<string>("Test Collection");
     const [tokenName, setTokenName] = useState<string>("Test Token #1");
-    const [tokenUri, setTokenUri] = useState<string>("https://aptosfoundation.org/brandbook/logomark/PNG/Aptos_mark_BLK.png");
+    const [tokenUri, setTokenUri] = useState<string>(DEFAULT_IMAGE);
     const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>("0x5640348ea9c52a2a6e173fc6c884122a1025266b664064af1a8168813899317a");
     const [tokenAddress, setTokenAddress] = useState<string>("");
     const [listingAddress, setListingAddress] = useState<string>("");
@@ -26,7 +27,7 @@ function App(this: any) {
     const [transactions, setTransactions] = useState<{ num: number, hash: string, type: string, data: string }[]>([]);
     const [wallet, setWallet] = useState<{
         name: string,
-        tokens: { collection: string, name: string, data_id: string, uri: string, type: string }[]
+        tokens: { standard: string, collection: string, name: string, data_id: string, uri: string, type: string }[]
     }>();
     const {account, network, connected, signAndSubmitTransaction} = useWallet();
     const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
@@ -77,9 +78,15 @@ function App(this: any) {
         const type = "Create V1 Collection";
         const payload = {
             type: "entry_function_payload",
-            function: `${moduleAddress}::test_token::create_v1_collection`,
+            function: `0x3::token::create_collection_script`,
             type_arguments: [],
-            arguments: [collectionName],
+            arguments: [
+                collectionName,
+                "Test v1 collection",
+                "https://aptosfoundation.org/brandbook/logomark/PNG/Aptos_mark_BLK.png",// collection URI
+                0, // Unlimited collection size
+                [true, true, true] // Everything allowed
+            ],
         };
 
         let txn = await runTransaction(type, payload);
@@ -94,9 +101,23 @@ function App(this: any) {
         const type = "Create V1 Token";
         const payload = {
             type: "entry_function_payload",
-            function: `${moduleAddress}::test_token::create_v1_nft`,
+            function: `0x3::token::create_token_script`,
             type_arguments: [],
-            arguments: [collectionName, tokenName],
+            arguments: [
+                collectionName,
+                tokenName,
+                "Test v1 token",
+                1, // balance 1 (this is a NFT)
+                1, // maximum (this is a singular NFT)
+                tokenUri,
+                account.address, // Royalty account
+                100, // royalty denominator
+                1, // royalty numerator
+                [true, true, true, true, true], // everything allowed mutable
+                [], // Property keys
+                [], // Property values
+                [], // Property types
+            ],
         };
         let txn = await runTransaction(type, payload);
         if (txn !== undefined) {
@@ -285,7 +306,14 @@ function App(this: any) {
                         // Fungible will also skip for now in this demo
                         type = "Fungible Token";
                     }
-                    return {collection: collection_name, name: name, data_id: data_id, uri: uri, type: type}
+                    return {
+                        standard: "V2",
+                        collection: collection_name,
+                        name: name,
+                        data_id: data_id,
+                        uri: uri,
+                        type: type
+                    }
                 } else {
                     // Handle V1
                     let collection_name = token_data.current_token_data?.current_collection?.collection_name || "";
@@ -293,7 +321,14 @@ function App(this: any) {
                     let data_id = token_data.current_token_data?.token_data_id || "";
                     let uri = token_data.current_token_data?.token_uri || "";
                     let type = "NFT" // TODO: Handle fungible
-                    return {collection: collection_name, name: name, data_id: data_id, uri: uri, type: type}
+                    return {
+                        standard: "V1",
+                        collection: collection_name,
+                        name: name,
+                        data_id: data_id,
+                        uri: uri,
+                        type: type
+                    }
                 }
             })
 
@@ -404,7 +439,7 @@ function App(this: any) {
                                                 style={{width: "calc(100% - 60px)"}}
                                                 placeholder="Token URI"
                                                 size="large"
-                                                defaultValue={"https://aptosfoundation.org/brandbook/logomark/PNG/Aptos_mark_BLK.png"}
+                                                defaultValue={DEFAULT_IMAGE}
                                             />
                                         </Col>
                                     </Row>
@@ -636,10 +671,11 @@ function App(this: any) {
                             </Row>
                             <Row>
                                 <ol>
-                                    {wallet?.tokens.map(({collection, name, data_id, uri, type}) =>
-                                        <li>{type} | {'"' + collection + "'"} - {'"' + name + '"'} <img width={50}
-                                                                                                        src={uri}
-                                                                                                        alt={"img"}/> - {data_id}
+                                    {wallet?.tokens.map(({standard, collection, name, data_id, uri, type}) =>
+                                        <li>{standard} | {type} | {'"' + collection + "'"} - {'"' + name + '"'} <img
+                                            width={50}
+                                            src={uri}
+                                            alt={"img"}/> - {data_id}
                                         </li>)}
                                 </ol>
                             </Row>
