@@ -1,12 +1,13 @@
 import {Alert, Button, Col, Input, Layout, Row} from "antd";
 import {WalletSelector} from "@aptos-labs/wallet-adapter-ant-design";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
-import {Network, Provider} from "aptos";
+import {FaucetClient, Network, Provider} from "aptos";
 import {useWallet} from "@aptos-labs/wallet-adapter-react";
-import {useState} from "react";
+import {useEffect, useState} from "react";
 
 // TODO: Load network from wallet
 export const DEVNET_PROVIDER = new Provider(Network.DEVNET)
+export const FAUCET = new FaucetClient("https://fullnode.devnet.aptoslabs.com", "https://faucet.devnet.aptoslabs.com");
 
 // TODO: make this more accessible / be deployed by others?
 export const moduleAddress = "0xb11affd5c514bb969e988710ef57813d9556cc1e3fe6dc9aa6a82b56aee53d98";
@@ -34,6 +35,30 @@ function App(this: any) {
         const val = event.target.value;
         setter(val);
     }
+
+
+    useEffect(() => {
+        // On load, pull the account's wallet and check that it exists (fund it if it doesn't)
+        if (!account) return;
+
+        ensure_account_exists();
+        loadWalletNfts();
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [account, network?.name])
+
+    const ensure_account_exists = async () => {
+        if (!account) return;
+        let address = account?.address as string;
+        try {
+            await DEVNET_PROVIDER.aptosClient.getAccount(address);
+        } catch (e) {
+            // TODO: check if it's account doesn't exist
+            // Fund the account
+            await FAUCET.fundAccount(address, 100000000);
+        }
+    }
+
     const addToTransactions = async (type: string, hash: string, data: string) => {
         const txns = transactions;
         const num = numTransaction;
@@ -269,7 +294,8 @@ function App(this: any) {
             const response = await signAndSubmitTransaction(payload);
             console.log(`${type}: ${response.hash}`);
             await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
-            return await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
+            let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
+            return txn;
         } catch (error: any) {
             console.log("Failed to wait for txn" + error)
         }
@@ -277,18 +303,13 @@ function App(this: any) {
         return undefined;
     }
 
-    const showWallet = async () => {
+    const loadWalletNfts = async () => {
         // Ensure you're logged in
         if (!account) {
             return {name: "Wallet not connected", nfts: []};
         }
 
         try {
-            /*
-            let accountName = await ANS_CLIENT.getPrimaryNameByAddress(account.address);
-            if (!accountName) {
-                accountName = account.address;
-            }*/
             let tokens_query = await DEVNET_PROVIDER.indexerClient.getOwnedTokens(account.address);
 
             let tokens = tokens_query.current_token_ownerships_v2.map(token_data => {
@@ -660,13 +681,12 @@ function App(this: any) {
                                 <h2>Wallet {wallet?.name}</h2>
                             </Row>
                             <Row>
-                                <p>TODO load automatically</p>
                                 <Button
-                                    onClick={() => showWallet()}
+                                    onClick={() => loadWalletNfts()}
                                     type="primary"
                                     style={{height: "40px", backgroundColor: "#3f67ff"}}
                                 >
-                                    Load wallet
+                                    Force refresh NFTs
                                 </Button>
                             </Row>
                             <Row>
