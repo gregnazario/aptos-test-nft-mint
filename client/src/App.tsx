@@ -25,6 +25,8 @@ function App(this: any) {
     const [objectAddress, setObjectAddress] = useState<string>("");
     const [destinationAddress, setDestinationAddress] = useState<string>("");
     const [numTransaction, setNumTransaction] = useState<number>(0);
+    const [chainId, setChainId] = useState<number>(-1);
+    const [walletLoadError, setWalletLoadError] = useState<string>("");
     const [transactions, setTransactions] = useState<{ num: number, hash: string, type: string, data: string }[]>([]);
     const [wallet, setWallet] = useState<{
         name: string,
@@ -36,8 +38,9 @@ function App(this: any) {
         setter(val);
     }
 
-
     useEffect(() => {
+        // Load the current chain id
+        loadChainId();
         // On load, pull the account's wallet and check that it exists (fund it if it doesn't)
         if (!account) return;
 
@@ -45,17 +48,27 @@ function App(this: any) {
         loadWalletNfts();
 
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [account, network?.name])
+    }, [account, network])
+
+    const loadChainId = async () => {
+        setChainId(await DEVNET_PROVIDER.getChainId());
+    }
 
     const ensure_account_exists = async () => {
         if (!account) return;
         let address = account?.address as string;
         try {
             await DEVNET_PROVIDER.aptosClient.getAccount(address);
+            setWalletLoadError("")
         } catch (e) {
             // TODO: check if it's account doesn't exist
             // Fund the account
-            await FAUCET.fundAccount(address, 100000000);
+            try {
+                await FAUCET.fundAccount(address, 100000000);
+                setWalletLoadError("")
+            } catch (e) {
+                setWalletLoadError(`Failed to load account ${e}`)
+            }
         }
     }
 
@@ -364,7 +377,7 @@ function App(this: any) {
 
     const isDevnet = (): boolean => {
         // TODO: Load devnet chain id on page load and compare that against the wallet
-        return network?.name?.toLowerCase() === 'devnet';
+        return Number(network?.chainId) === chainId || network?.name?.toLowerCase() === 'devnet';
     }
 
     return (
@@ -390,6 +403,11 @@ function App(this: any) {
             { // TODO: Add back spinner
                 connected && isDevnet() &&
                 <>
+                    {walletLoadError && <Row>
+                        <Alert
+                            message={`Wallet failed to load for ${account?.address}.  Please try connecting again or funding the account ${walletLoadError}`}
+                            type="warning"/>
+                    </Row>}
                     <Row>
                         <Col span={12}>
                             <Row align="middle">
