@@ -306,6 +306,11 @@ function App(this: any) {
         setWallet({name: "Unable to load wallet", tokens: []})
     }
 
+    const isDevnet = (): boolean => {
+        // TODO: Load devnet chain id on page load and compare that against the wallet
+        return network?.name?.toLowerCase() === 'devnet';
+    }
+
     return (
         <>
             <Layout>
@@ -323,11 +328,11 @@ function App(this: any) {
                 <Alert message={`Please connect your wallet`} type="info"/>
             }
             {
-                connected && network?.name as string !== 'Devnet' &&
+                connected && !isDevnet() &&
                 <Alert message={`Wallet is connected to ${network?.name}.  Please connect to devnet`} type="warning"/>
             }
             { // TODO: Add back spinner
-                connected && network?.name as string === "Devnet" &&
+                connected && isDevnet() &&
                 <>
                     <Row>
                         <Col span={12}>
