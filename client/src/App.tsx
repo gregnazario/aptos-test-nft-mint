@@ -17,6 +17,12 @@ function App(this: any) {
     // TODO Consolidate a lot of these
     const [collectionName, setCollectionName] = useState<string>("Test Collection");
     const [tokenName, setTokenName] = useState<string>("Test Token #1");
+
+    const [creatorAddress, setCreatorAddress] = useState<string>("");
+    const [tokenPropertyVersion, setTokenPropertyVersion] = useState<number>(0);
+    const [royaltyPercent, setRoyaltyPercent] = useState<number>(0);
+
+    const [description, setDescription] = useState<string>("");
     const [tokenUri, setTokenUri] = useState<string>(DEFAULT_IMAGE);
     const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>("0x5640348ea9c52a2a6e173fc6c884122a1025266b664064af1a8168813899317a");
     const [tokenAddress, setTokenAddress] = useState<string>("");
@@ -25,17 +31,32 @@ function App(this: any) {
     const [objectAddress, setObjectAddress] = useState<string>("");
     const [destinationAddress, setDestinationAddress] = useState<string>("");
     const [numTransaction, setNumTransaction] = useState<number>(0);
+    const [auctionDuration, setAuctionDuration] = useState<number>(3600);
     const [chainId, setChainId] = useState<number>(-1);
     const [walletLoadError, setWalletLoadError] = useState<string>("");
     const [transactions, setTransactions] = useState<{ num: number, hash: string, type: string, data: string }[]>([]);
     const [wallet, setWallet] = useState<{
         name: string,
-        tokens: { standard: string, collection: string, name: string, data_id: string, uri: string, type: string }[]
+        tokens: {
+            standard: string,
+            collection: string,
+            name: string,
+            data_id: string,
+            uri: string,
+            type: string,
+            property_version: string,
+            creator_address: string
+        }[]
     }>();
     const {account, network, connected, signAndSubmitTransaction} = useWallet();
     const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
         const val = event.target.value;
         setter(val);
+    }
+
+    const onNumberChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: number) => number) | number)) => void) => {
+        const val = event.target.value;
+        setter(Number(val));
     }
 
     useEffect(() => {
@@ -120,8 +141,8 @@ function App(this: any) {
             type_arguments: [],
             arguments: [
                 collectionName,
-                "Test v1 collection",
-                "https://aptosfoundation.org/brandbook/logomark/PNG/Aptos_mark_BLK.png",// collection URI
+                description,
+                tokenUri,// collection URI
                 0, // Unlimited collection size
                 [true, true, true] // Everything allowed
             ],
@@ -144,13 +165,13 @@ function App(this: any) {
             arguments: [
                 collectionName,
                 tokenName,
-                "Test v1 token",
+                description,
                 1, // balance 1 (this is a NFT)
                 1, // maximum (this is a singular NFT)
                 tokenUri,
                 account.address, // Royalty account
                 100, // royalty denominator
-                1, // royalty numerator
+                royaltyPercent, // royalty numerator
                 [true, true, true, true, true], // everything allowed mutable
                 [], // Property keys
                 [], // Property values
@@ -162,6 +183,82 @@ function App(this: any) {
             await addToTransactions(type, txn.hash, "");
         }
     }
+
+    const createV1Listing = async () => {
+        // Ensure you're logged in
+        if (!account) return [];
+        const type = "Create fixed price V1 listing";
+        const payload = {
+            type: "entry_function_payload",
+            function: `${moduleAddress}::coin_listing::init_fixed_price_for_tokenv1`,
+            type_arguments: ["0x1::aptos_coin::AptosCoin"],
+            // TODO: allow different start time
+            arguments: [
+                creatorAddress,
+                collectionName,
+                tokenName,
+                tokenPropertyVersion,
+                feeScheduleAddress,
+                Math.floor(new Date().getTime() / 1000),
+                listingPrice
+            ],
+        };
+
+        let txn = await runTransaction(type, payload);
+        if (txn !== undefined) {
+            let address = "unknown";
+            for (let event of txn.events) {
+                if (event.type === "0x1::object::TransferEvent") {
+                    address = event.data.to;
+                    break
+                }
+            }
+
+            await addToTransactions(type, txn.hash, `Listing address: ${address}`);
+        }
+    }
+
+    const createV1AuctionListing = async () => {
+        // Ensure you're logged in
+        if (!account) return [];
+        const type = "Create auction V1 listing";
+
+        const now = Math.floor(new Date().getTime() / 1000);
+
+        const payload = {
+            type: "entry_function_payload",
+            function: `${moduleAddress}::coin_listing::init_auction_for_tokenv1`,
+            type_arguments: ["0x1::aptos_coin::AptosCoin"],
+            // TODO: allow different start time
+            arguments: [
+                creatorAddress,
+                collectionName,
+                tokenName,
+                tokenPropertyVersion,
+                feeScheduleAddress,
+                now,
+                listingPrice,
+                100,
+                now + auctionDuration,
+                auctionDuration,
+                []
+            ],
+        };
+
+        let txn = await runTransaction(type, payload);
+        if (txn !== undefined) {
+            let address = "unknown";
+            for (let event of txn.events) {
+                if (event.type === "0x1::object::TransferEvent") {
+                    address = event.data.to;
+                    break
+                }
+            }
+
+            await addToTransactions(type, txn.hash, `Listing address: ${address}`);
+        }
+    }
+
     const createV2Collection = async () => {
         // Ensure you're logged in
         if (!account || !collectionName) return [];
@@ -171,10 +268,10 @@ function App(this: any) {
             function: `0x4::aptos_token::create_collection`,
             type_arguments: [],
             arguments: [
-                "Test v2 collection", // Description
+                description, // Description
                 10000, // Maximum supply
                 collectionName,
-                "https://aptosfoundation.org/brandbook/logomark/PNG/Aptos_mark_WHT.png",// collection URI
+                tokenUri,// collection URI
                 true, // These are all mutable
                 true,
                 true,
@@ -184,7 +281,7 @@ function App(this: any) {
                 true,
                 true,
                 true,
-                1, // Royalty numerator
+                royaltyPercent, // Royalty numerator
                 100, // Royalty denominator
             ],
         };
@@ -214,7 +311,7 @@ function App(this: any) {
             type_arguments: [],
             arguments: [
                 collectionName,
-                "Test v2 token", // Description
+                description,
                 tokenName,
                 tokenUri,
                 [],
@@ -229,16 +326,81 @@ function App(this: any) {
         }
     }
 
+    const createSoulboundV2Token = async () => {
+        // Ensure you're logged in
+        if (!account || !collectionName || !tokenName || !tokenUri) return [];
+        const type = "Create SoulboundV2 Token";
+        const payload = {
+            type: "entry_function_payload",
+            function: `0x4::aptos_token::mint_soul_bound`,
+            type_arguments: [],
+            arguments: [
+                collectionName,
+                description,
+                tokenName,
+                tokenUri,
+                [],
+                [],
+                [],
+                account.address
+            ],
+        };
+        let txn = await runTransaction(type, payload);
+        if (txn !== undefined) {
+            console.log(`TXN: ${JSON.stringify(txn.events[0].data.token)}`);
+            await addToTransactions(type, txn.hash, `TokenAddress: ${txn.events[0].data.token}`);
+        }
+    }
+
+
     const createV2Listing = async () => {
         // Ensure you're logged in
         if (!account || !tokenAddress) return [];
-        const type = "Create listing";
+        const type = "Create fixed price V2 listing";
         const payload = {
             type: "entry_function_payload",
             function: `${moduleAddress}::coin_listing::init_fixed_price`,
             type_arguments: ["0x1::aptos_coin::AptosCoin"],
             // TODO: allow different start time
             arguments: [tokenAddress, feeScheduleAddress, Math.floor(new Date().getTime() / 1000), listingPrice],
+        };
+
+        let txn = await runTransaction(type, payload);
+        if (txn !== undefined) {
+            let address = "unknown";
+            for (let event of txn.events) {
+                if (event.type === "0x1::object::TransferEvent") {
+                    address = event.data.to;
+                    break
+                }
+            }
+
+            await addToTransactions(type, txn.hash, `Listing address: ${address}`);
+        }
+    }
+
+    const createV2AuctionListing = async () => {
+        // Ensure you're logged in
+        if (!account || !tokenAddress) return [];
+        const type = "Create auction V2 listing";
+
+        const now = Math.floor(new Date().getTime() / 1000);
+
+        const payload = {
+            type: "entry_function_payload",
+            function: `${moduleAddress}::coin_listing::init_auction`,
+            type_arguments: ["0x1::aptos_coin::AptosCoin"],
+            // TODO: allow different start time
+            arguments: [
+                tokenAddress,
+                feeScheduleAddress,
+                now,
+                listingPrice,
+                1000000,
+                now + auctionDuration,
+                auctionDuration,
+                []
+            ],
         };
 
         let txn = await runTransaction(type, payload);
@@ -327,6 +489,7 @@ function App(this: any) {
 
             let tokens = tokens_query.current_token_ownerships_v2.map(token_data => {
                 if (token_data.token_standard === "v2") {
+                    let creator_address = token_data.current_token_data?.current_collection?.creator_address || "";
                     let collection_name = token_data.current_token_data?.current_collection?.collection_name || "";
                     let name = token_data.current_token_data?.token_name || "";
                     let data_id = token_data.current_token_data?.token_data_id || "";
@@ -346,14 +509,18 @@ function App(this: any) {
                         name: name,
                         data_id: data_id,
                         uri: uri,
-                        type: type
+                        type: type,
+                        property_version: "",
+                        creator_address: creator_address
                     }
                 } else {
                     // Handle V1
+                    let collection_creator = token_data.current_token_data?.current_collection?.creator_address || "";
                     let collection_name = token_data.current_token_data?.current_collection?.collection_name || "";
                     let name = token_data.current_token_data?.token_name || "";
                     let data_id = token_data.current_token_data?.token_data_id || "";
                     let uri = token_data.current_token_data?.token_uri || "";
+                    let property_version = token_data.current_token_data?.largest_property_version_v1 || "";
                     let type = "NFT" // TODO: Handle fungible
                     return {
                         standard: "V1",
@@ -361,7 +528,9 @@ function App(this: any) {
                         name: name,
                         data_id: data_id,
                         uri: uri,
-                        type: type
+                        type: type,
+                        property_version: property_version,
+                        creator_address: collection_creator
                     }
                 }
             })
@@ -398,7 +567,8 @@ function App(this: any) {
             }
             {
                 connected && !isDevnet() &&
-                <Alert message={`Wallet is connected to ${network?.name}.  Please connect to devnet`} type="warning"/>
+                <Alert message={`Wallet is connected to ${network?.name}.  Please connect to devnet`}
+                       type="warning"/>
             }
             { // TODO: Add back spinner
                 connected && isDevnet() &&
@@ -408,330 +578,466 @@ function App(this: any) {
                             message={`Wallet failed to load for ${account?.address}.  Please try connecting again or funding the account ${walletLoadError}`}
                             type="warning"/>
                     </Row>}
-                    <Row>
-                        <Col span={12}>
-                            <Row align="middle">
-                                <Col flex={"auto"} offset={2}>
-                                    <h1>"Deploy marketplace"</h1>
-                                </Col>
-                            </Row>
-                            <Row align="middle">
-                                <Col flex={"auto"} offset={2}>
+                        <Row>
+                            <Col span={12}>
+                                <Row align="middle">
+                                    <Col flex={"auto"} offset={2}>
+                                        <h1>"Deploy marketplace"</h1>
+                                    </Col>
+                                </Row>
+                                <Row align="middle">
+                                    <Col flex={"auto"} offset={2}>
+                                        <Button
+                                            onClick={() => createFeeSchedule()}
+                                            type="primary"
+                                            style={{height: "40px", backgroundColor: "#3f67ff"}}
+                                        >
+                                            Create Fee schedule for marketplace (at your address)
+                                        </Button>
+                                    </Col>
+                                </Row>
+                                <Row align="middle">
+                                    <Col flex={"auto"} offset={2}>
+                                        <h2>"Launchpad"</h2>
+                                        <Row align="middle">
+                                            <p>You can create dummy collections and tokens right here on this page for
+                                                testing
+                                                purposes. Collection needs Collection Name. Token needs both.</p>
+                                        </Row>
+                                        <Row align="middle">
+                                            <Col span={4}>
+                                                <p>Collection name:</p>
+                                            </Col>
+                                            <Col flex={"auto"}>
+                                                <Input
+                                                    onChange={(event) => {
+                                                        onStringChange(event, setCollectionName)
+                                                    }}
+                                                    style={{width: "calc(100% - 60px)"}}
+                                                    placeholder="Collection Name"
+                                                    size="large"
+                                                    defaultValue={"Test Collection"}
+                                                />
+                                            </Col>
+                                        </Row>
+                                        <Row align="middle">
+                                            <Col span={4}>
+                                                <p>Token name:</p>
+                                            </Col>
+                                            <Col flex={"auto"}>
+                                                <Input
+                                                    onChange={(event) => {
+                                                        onStringChange(event, setTokenName)
+                                                    }}
+                                                    style={{width: "calc(100% - 60px)"}}
+                                                    placeholder="Token Name"
+                                                    size="large"
+                                                    defaultValue={"Test Token #1"}
+                                                />
+                                            </Col>
+                                        </Row>
+                                        <Row align="middle">
+                                            <Col span={4}>
+                                                <p>URI:</p>
+                                            </Col>
+                                            <Col flex={"auto"}>
+                                                <Input
+                                                    onChange={(event) => {
+                                                        onStringChange(event, setTokenUri)
+                                                    }}
+                                                    style={{width: "calc(100% - 60px)"}}
+                                                    placeholder="Token URI"
+                                                    size="large"
+                                                    defaultValue={DEFAULT_IMAGE}
+                                                />
+                                            </Col>
+                                        </Row>
+                                        <Row align="middle">
+                                            <Col span={4}>
+                                                <p>Description:</p>
+                                            </Col>
+                                            <Col flex={"auto"}>
+                                                <Input
+                                                    onChange={(event) => {
+                                                        onStringChange(event, setDescription)
+                                                    }}
+                                                    style={{width: "calc(100% - 60px)"}}
+                                                    placeholder="Description"
+                                                    size="large"
+                                                    defaultValue={""}
+                                                />
+                                            </Col>
+                                        </Row>
+                                        <Row align="middle">
+                                            <Col span={4}>
+                                                <p>Royalty Percent:</p>
+                                            </Col>
+                                            <Col flex={"auto"}>
+                                                <Input
+                                                    onChange={(event) => {
+                                                        onNumberChange(event, setRoyaltyPercent)
+                                                    }}
+                                                    style={{width: "calc(100% - 60px)"}}
+                                                    placeholder="Royalty Percent (whole percent)"
+                                                    size="large"
+                                                    defaultValue={1}
+                                                />
+                                            </Col>
+                                        </Row>
+                                        <Row align="middle">
+                                            <Col span={4}>
+                                                <h3>Token V1</h3>
+                                            </Col>
+                                            <Col span={4}>
+                                                <Button
+                                                    onClick={() => createV1Collection()}
+                                                    type="primary"
+                                                    style={{height: "40px", backgroundColor: "#3f67ff"}}
+                                                >
+                                                    Create V1 Collection
+                                                </Button>
+                                            </Col>
+                                        </Row>
+                                        <Row align="middle">
+                                            <Col span={4} offset={4}>
+                                                <Button
+                                                    onClick={() => createV1Token()}
+                                                    type="primary"
+                                                    style={{height: "40px", backgroundColor: "#3f67ff"}}
+                                                >
+                                                    Create V1 Token
+                                                </Button>
+                                            </Col>
+                                        </Row>
+                                        <Row align="middle">
+                                            <Col span={4}>
+                                                <h3>Token V2</h3>
+                                            </Col>
+                                            <Col span={4}>
+                                                <Button
+                                                    onClick={() => createV2Collection()}
+                                                    type="primary"
+                                                    style={{height: "40px", backgroundColor: "#3f67ff"}}
+                                                >
+                                                    Create V2 Collection
+                                                </Button>
+                                            </Col>
+                                        </Row>
+                                        <Row align="middle">
+                                            <Col span={4} offset={4}>
+                                                <Button
+                                                    onClick={() => createV2Token()}
+                                                    type="primary"
+                                                    style={{height: "40px", backgroundColor: "#3f67ff"}}
+                                                >
+                                                    Create V2 Token
+                                                </Button>
+                                            </Col>
+                                        </Row>
+                                        <Row align="middle">
+                                            <Col span={4} offset={4}>
+                                                <Button
+                                                    onClick={() => createSoulboundV2Token()}
+                                                    type="primary"
+                                                    style={{height: "40px", backgroundColor: "#3f67ff"}}
+                                                >
+                                                    Create Soulbound V2 Token
+                                                </Button>
+                                            </Col>
+                                        </Row>
+                                    </Col>
+                                </Row>
+                                <Row align="middle">
+                                    <Col flex={"auto"} offset={2}>
+                                        <h2>"NFT Marketplace"</h2>
+                                        <Row align="middle">
+                                            <p>This acts as a marketplace. You must know the listings, no fancy UI will
+                                                be
+                                                provided
+                                                to find listings</p>
+                                        </Row>
+                                        <Row align="middle">
+                                            <h3>Listing</h3>
+                                        </Row>
+                                        <Row align="middle">
+                                            <Col span={4}>
+                                                <p>(V1 only)Token creator address: </p>
+                                            </Col>
+                                            <Col flex={"auto"}>
+                                                <Input
+                                                    onChange={(event) => {
+                                                        onStringChange(event, setCreatorAddress)
+                                                    }}
+                                                    placeholder="Creator Address"
+                                                    size="large"
+                                                    defaultValue={""}
+                                                />
+                                            </Col>
+                                        </Row>
+                                        <Row align="middle">
+                                            <Col span={4}>
+                                                <p>(V1 only)Token property version: </p>
+                                            </Col>
+                                            <Col flex={"auto"}>
+                                                <Input
+                                                    onChange={(event) => {
+                                                        onNumberChange(event, setTokenPropertyVersion)
+                                                    }}
+                                                    placeholder="Token property version"
+                                                    size="large"
+                                                    defaultValue={""}
+                                                />
+                                            </Col>
+                                        </Row>
+                                        <Row align="middle">
+                                            <Col span={4}>
+                                                <p>(V2 only)Token address: </p>
+                                            </Col>
+                                            <Col flex={"auto"}>
+                                                <Input
+                                                    onChange={(event) => {
+                                                        onStringChange(event, setTokenAddress)
+                                                    }}
+                                                    placeholder="Token Address"
+                                                    size="large"
+                                                    defaultValue={""}
+                                                />
+                                            </Col>
+                                        </Row>
+                                        <Row align="middle">
+                                            <Col span={4}>
+                                                <p>Fee schedule address: </p>
+                                            </Col>
+                                            <Col flex={"auto"}>
+                                                <Input
+                                                    onChange={(event) => {
+                                                        onStringChange(event, setFeeScheduleAddress)
+                                                    }}
+                                                    placeholder="Fee Schedule Address"
+                                                    size="large"
+                                                    defaultValue={"0x5640348ea9c52a2a6e173fc6c884122a1025266b664064af1a8168813899317a"}
+                                                />
+                                            </Col>
+                                        </Row>
+                                        <Row align="middle">
+                                            <Col span={4}>
+                                                <p>Price(Octas): </p>
+                                            </Col>
+                                            <Col flex={"auto"}>
+                                                <Input
+                                                    onChange={(event) => {
+                                                        onStringChange(event, setListingPrice)
+                                                    }}
+                                                    placeholder="Price"
+                                                    size="large"
+                                                    defaultValue={"100000000"}
+                                                />
+                                            </Col>
+                                        </Row>
+                                        <Row align="middle">
+                                            <Col span={4}>
+                                                <p>Auction Duration(seconds): </p>
+                                            </Col>
+                                            <Col flex={"auto"}>
+                                                <Input
+                                                    onChange={(event) => {
+                                                        onNumberChange(event, setAuctionDuration)
+                                                    }}
+                                                    placeholder="Auction Duration"
+                                                    size="large"
+                                                    defaultValue={"3600"}
+                                                />
+                                            </Col>
+                                        </Row>
+                                        <Row align="middle">
+                                            <Col span={4}>
+                                                <h3>List Fixed price</h3>
+                                            </Col>
+                                            <Col span={6}>
+                                                <Button
+                                                    onClick={() => createV1Listing()}
+                                                    type="primary"
+                                                    style={{height: "40px", backgroundColor: "#3f67ff"}}
+                                                >
+                                                    Create V1 Fixed Listing
+                                                </Button>
+                                            </Col>
+                                            <Col span={6}>
+                                                <Button
+                                                    onClick={() => createV2Listing()}
+                                                    type="primary"
+                                                    style={{height: "40px", backgroundColor: "#3f67ff"}}
+                                                >
+                                                    Create V2 Fixed Listing
+                                                </Button>
+                                            </Col>
+                                        </Row>
+                                        <Row align="middle">
+                                            <Col span={4}>
+                                                <h3>List auction</h3>
+                                            </Col>
+                                            <Col span={6}>
+                                                <Button
+                                                    onClick={() => createV1AuctionListing()}
+                                                    type="primary"
+                                                    style={{height: "40px", backgroundColor: "#3f67ff"}}
+                                                >
+                                                    Create V1 Auction Listing
+                                                </Button>
+                                            </Col>
+                                            <Col span={6}>
+                                                <Button
+                                                    onClick={() => createV2AuctionListing()}
+                                                    type="primary"
+                                                    style={{height: "40px", backgroundColor: "#3f67ff"}}
+                                                >
+                                                    Create V2 Auction Listing
+                                                </Button>
+                                            </Col>
+                                        </Row>
+                                        <Row align="middle">
+                                            <h3>Purchasing</h3>
+                                        </Row>
+                                        <Row align="middle">
+                                            <Col span={4}>
+                                                <p>Listing address: </p>
+                                            </Col>
+                                            <Col flex={"auto"}>
+                                                <Input
+                                                    onChange={(event) => {
+                                                        onStringChange(event, setListingAddress)
+                                                    }}
+                                                    style={{width: "calc(100% - 60px)"}}
+                                                    placeholder="Listing Address"
+                                                    size="large"
+                                                    defaultValue={""}
+                                                />
+                                            </Col>
+                                        </Row>
+                                        <Row align="middle">
+                                            <Col span={2} offset={4}>
+                                                <Button
+                                                    onClick={() => purchaseListing()}
+                                                    type="primary"
+                                                    style={{height: "40px", backgroundColor: "#3f67ff"}}
+                                                >
+                                                    Buy Listing
+                                                </Button>
+                                            </Col>
+                                            <Col span={2} offset={2}>
+                                                <Button
+                                                    onClick={() => cancelListing()}
+                                                    type="primary"
+                                                    style={{height: "40px", backgroundColor: "#3f67ff"}}
+                                                >
+                                                    Cancel Listing
+                                                </Button>
+                                            </Col>
+                                        </Row>
+                                    </Col>
+                                </Row>
+                                <Row align="middle">
+                                    <Col flex={"auto"} offset={2}>
+                                        <Row align={"middle"}>
+                                            <Col span={4}>
+                                                <h3>Transfer Object</h3>
+                                            </Col>
+                                        </Row>
+                                        <Row align="middle">
+                                            <Col span={4}>
+                                                <p>Object address: </p>
+                                            </Col>
+                                            <Col flex={"auto"}>
+                                                <Input
+                                                    onChange={(event) => {
+                                                        onStringChange(event, setObjectAddress)
+                                                    }}
+                                                    style={{width: "calc(100% - 60px)"}}
+                                                    placeholder="Object Address"
+                                                    size="large"
+                                                    defaultValue={""}
+                                                />
+                                            </Col>
+                                        </Row>
+                                        <Row align="middle">
+                                            <Col span={4}>
+                                                <p>Destination address: </p>
+                                            </Col>
+                                            <Col flex={"auto"}>
+                                                <Input
+                                                    onChange={(event) => {
+                                                        onStringChange(event, setDestinationAddress)
+                                                    }}
+                                                    style={{width: "calc(100% - 60px)"}}
+                                                    placeholder="Destination Address"
+                                                    size="large"
+                                                    defaultValue={""}
+                                                />
+                                            </Col>
+                                        </Row>
+                                        <Row align="middle">
+                                            <Col span={2} offset={4}>
+                                                <Button
+                                                    onClick={() => transferObject()}
+                                                    type="primary"
+                                                    style={{height: "40px", backgroundColor: "#3f67ff"}}
+                                                >
+                                                    Transfer Object
+                                                </Button>
+                                            </Col>
+                                        </Row>
+                                    </Col>
+                                </Row>
+                            </Col>
+                            <Col span={12}>
+                                <Row>
+                                    <h2>Wallet {wallet?.name}</h2>
+                                </Row>
+                                <Row>
                                     <Button
-                                        onClick={() => createFeeSchedule()}
+                                        onClick={() => loadWalletNfts()}
                                         type="primary"
                                         style={{height: "40px", backgroundColor: "#3f67ff"}}
                                     >
-                                        Create Fee schedule for marketplace (at your address)
+                                        Force refresh NFTs
                                     </Button>
-                                </Col>
-                            </Row>
-                            <Row align="middle">
-                                <Col flex={"auto"} offset={2}>
-                                    <h2>"Launchpad"</h2>
-                                    <Row align="middle">
-                                        <p>You can create dummy collections and tokens right here on this page for
-                                            testing
-                                            purposes. Collection needs Collection Name. Token needs both.</p>
-                                    </Row>
-                                    <Row align="middle">
-                                        <Col span={4}>
-                                            <p>Collection name:</p>
-                                        </Col>
-                                        <Col flex={"auto"}>
-                                            <Input
-                                                onChange={(event) => {
-                                                    onStringChange(event, setCollectionName)
-                                                }}
-                                                style={{width: "calc(100% - 60px)"}}
-                                                placeholder="Collection Name"
-                                                size="large"
-                                                defaultValue={"Test Collection"}
-                                            />
-                                        </Col>
-                                    </Row>
-                                    <Row align="middle">
-                                        <Col span={4}>
-                                            <p>Token name:</p>
-                                        </Col>
-                                        <Col flex={"auto"}>
-                                            <Input
-                                                onChange={(event) => {
-                                                    onStringChange(event, setTokenName)
-                                                }}
-                                                style={{width: "calc(100% - 60px)"}}
-                                                placeholder="Token Name"
-                                                size="large"
-                                                defaultValue={"Test Token #1"}
-                                            />
-                                        </Col>
-                                    </Row>
-                                    <Row align="middle">
-                                        <Col span={4}>
-                                            <p>Token name:</p>
-                                        </Col>
-                                        <Col flex={"auto"}>
-                                            <Input
-                                                onChange={(event) => {
-                                                    onStringChange(event, setTokenUri)
-                                                }}
-                                                style={{width: "calc(100% - 60px)"}}
-                                                placeholder="Token URI"
-                                                size="large"
-                                                defaultValue={DEFAULT_IMAGE}
-                                            />
-                                        </Col>
-                                    </Row>
-                                    <Row align="middle">
-                                        <Col span={4}>
-                                            <h3>Token V1</h3>
-                                        </Col>
-                                        <Col span={4}>
-                                            <Button
-                                                onClick={() => createV1Collection()}
-                                                type="primary"
-                                                style={{height: "40px", backgroundColor: "#3f67ff"}}
-                                            >
-                                                Create V1 Collection
-                                            </Button>
-                                        </Col>
-                                        <Col span={4} offset={2}>
-                                            <Button
-                                                onClick={() => createV1Token()}
-                                                type="primary"
-                                                style={{height: "40px", backgroundColor: "#3f67ff"}}
-                                            >
-                                                Create V1 Token
-                                            </Button>
-                                        </Col>
-                                    </Row>
-                                    <Row align="middle">
-                                        <Col span={4}>
-                                            <h3>Token V2</h3>
-                                        </Col>
-                                        <Col span={4}>
-                                            <Button
-                                                onClick={() => createV2Collection()}
-                                                type="primary"
-                                                style={{height: "40px", backgroundColor: "#3f67ff"}}
-                                            >
-                                                Create V2 Collection
-                                            </Button>
-                                        </Col>
-                                        <Col span={4} offset={2}>
-                                            <Button
-                                                onClick={() => createV2Token()}
-                                                type="primary"
-                                                style={{height: "40px", backgroundColor: "#3f67ff"}}
-                                            >
-                                                Create V2 Token
-                                            </Button>
-                                        </Col>
-                                    </Row>
-                                </Col>
-                            </Row>
-                            <Row align="middle">
-                                <Col flex={"auto"} offset={2}>
-                                    <h2>"NFT Marketplace"</h2>
-                                    <Row align="middle">
-                                        <p>This acts as a marketplace. You must know the listings, no fancy UI will be
-                                            provided
-                                            to find listings</p>
-                                    </Row>
-                                    <Row align="middle">
-                                        <h3>V2 Listing</h3>
-                                    </Row>
-                                    <Row align="middle">
-                                        <Col span={4}>
-                                            <p>Token address: </p>
-                                        </Col>
-                                        <Col flex={"auto"}>
-                                            <Input
-                                                onChange={(event) => {
-                                                    onStringChange(event, setTokenAddress)
-                                                }}
-                                                placeholder="Token Address"
-                                                size="large"
-                                                defaultValue={""}
-                                            />
-                                        </Col>
-                                    </Row>
-                                    <Row align="middle">
-                                        <Col span={4}>
-                                            <p>Fee schedule address: </p>
-                                        </Col>
-                                        <Col flex={"auto"}>
-                                            <Input
-                                                onChange={(event) => {
-                                                    onStringChange(event, setFeeScheduleAddress)
-                                                }}
-                                                placeholder="Fee Schedule Address"
-                                                size="large"
-                                                defaultValue={"0x5640348ea9c52a2a6e173fc6c884122a1025266b664064af1a8168813899317a"}
-                                            />
-                                        </Col>
-                                    </Row>
-                                    <Row align="middle">
-                                        <Col span={4}>
-                                            <p>Price(Octas): </p>
-                                        </Col>
-                                        <Col flex={"auto"}>
-                                            <Input
-                                                onChange={(event) => {
-                                                    onStringChange(event, setListingPrice)
-                                                }}
-                                                placeholder="Price"
-                                                size="large"
-                                                defaultValue={"100000000"}
-                                            />
-                                        </Col>
-                                    </Row>
-                                    <Row align="middle">
-                                        <Col span={4}>
-                                            <h3>List V2</h3>
-                                        </Col>
-                                        <Col span={4}>
-                                            <Button
-                                                onClick={() => createV2Listing()}
-                                                type="primary"
-                                                style={{height: "40px", backgroundColor: "#3f67ff"}}
-                                            >
-                                                Create Fixed Listing
-                                            </Button>
-                                        </Col>
-                                    </Row>
-                                    <Row align="middle">
-                                        <h3>Purchasing</h3>
-                                    </Row>
-                                    <Row align="middle">
-                                        <Col span={4}>
-                                            <p>Listing address: </p>
-                                        </Col>
-                                        <Col flex={"auto"}>
-                                            <Input
-                                                onChange={(event) => {
-                                                    onStringChange(event, setListingAddress)
-                                                }}
-                                                style={{width: "calc(100% - 60px)"}}
-                                                placeholder="Listing Address"
-                                                size="large"
-                                                defaultValue={""}
-                                            />
-                                        </Col>
-                                    </Row>
-                                    <Row align="middle">
-                                        <Col span={2} offset={4}>
-                                            <Button
-                                                onClick={() => purchaseListing()}
-                                                type="primary"
-                                                style={{height: "40px", backgroundColor: "#3f67ff"}}
-                                            >
-                                                Buy Listing
-                                            </Button>
-                                        </Col>
-                                        <Col span={2} offset={2}>
-                                            <Button
-                                                onClick={() => cancelListing()}
-                                                type="primary"
-                                                style={{height: "40px", backgroundColor: "#3f67ff"}}
-                                            >
-                                                Cancel Listing
-                                            </Button>
-                                        </Col>
-                                    </Row>
-                                </Col>
-                            </Row>
-                            <Row align="middle">
-                                <Col flex={"auto"} offset={2}>
-                                    <Row align={"middle"}>
-                                        <Col span={4}>
-                                            <h3>Transfer Object</h3>
-                                        </Col>
-                                    </Row>
-                                    <Row align="middle">
-                                        <Col span={4}>
-                                            <p>Object address: </p>
-                                        </Col>
-                                        <Col flex={"auto"}>
-                                            <Input
-                                                onChange={(event) => {
-                                                    onStringChange(event, setObjectAddress)
-                                                }}
-                                                style={{width: "calc(100% - 60px)"}}
-                                                placeholder="Object Address"
-                                                size="large"
-                                                defaultValue={""}
-                                            />
-                                        </Col>
-                                    </Row>
-                                    <Row align="middle">
-                                        <Col span={4}>
-                                            <p>Destination address: </p>
-                                        </Col>
-                                        <Col flex={"auto"}>
-                                            <Input
-                                                onChange={(event) => {
-                                                    onStringChange(event, setDestinationAddress)
-                                                }}
-                                                style={{width: "calc(100% - 60px)"}}
-                                                placeholder="Destination Address"
-                                                size="large"
-                                                defaultValue={""}
-                                            />
-                                        </Col>
-                                    </Row>
-                                    <Row align="middle">
-                                        <Col span={2} offset={4}>
-                                            <Button
-                                                onClick={() => transferObject()}
-                                                type="primary"
-                                                style={{height: "40px", backgroundColor: "#3f67ff"}}
-                                            >
-                                                Transfer Object
-                                            </Button>
-                                        </Col>
-                                    </Row>
-                                </Col>
-                            </Row>
-                        </Col>
-                        <Col span={12}>
-                            <Row>
-                                <h2>Wallet {wallet?.name}</h2>
-                            </Row>
-                            <Row>
-                                <Button
-                                    onClick={() => loadWalletNfts()}
-                                    type="primary"
-                                    style={{height: "40px", backgroundColor: "#3f67ff"}}
-                                >
-                                    Force refresh NFTs
-                                </Button>
-                            </Row>
-                            <Row>
-                                <ol>
-                                    {wallet?.tokens.map(({standard, collection, name, data_id, uri, type}) =>
-                                        <li>{standard} | {type} | {'"' + collection + "'"} - {'"' + name + '"'} <img
-                                            width={50}
-                                            src={uri}
-                                            alt={"img"}/> - {data_id}
+                                </Row>
+                                <Row>
+                                    <ol>
+                                        {wallet?.tokens.map(({
+                                                                 standard,
+                                                                 collection,
+                                                                 name,
+                                                                 data_id,
+                                                                 uri,
+                                                                 type,
+                                                                 creator_address,
+                                                                 property_version
+                                                             }) =>
+                                            <li>{standard} | {type} | {'"' + collection + "'"} - {'"' + name + '"'} - {"CREATOR: " + creator_address} - {"VERSION: " + property_version}
+                                                <img
+                                                    width={50}
+                                                    src={uri}
+                                                    alt={"img"}/> - {data_id}
+                                            </li>)}
+                                    </ol>
+                                </Row>
+                                <Row>
+                                    <h2>Transaction Log</h2>
+                                    <p>This keeps track of all the transactions that have occurred, but there's no
+                                        cookies
+                                        or
+                                        lookup, so page refreshes will make it disappear
+                                        TODO: Load recent transactions from API
+                                    </p>
+                                    <ol>
+                                        {transactions.map(({hash, type, data}) => <li>{type} - <a
+                                            href={`https://explorer.aptoslabs.com/txn/${hash}?network=devnet`}>{hash}</a> - {data}
                                         </li>)}
-                                </ol>
-                            </Row>
-                            <Row>
-                                <h2>Transaction Log</h2>
-                                <p>This keeps track of all the transactions that have occurred, but there's no cookies
-                                    or
-                                    lookup, so page refreshes will make it disappear
-                                    TODO: Load recent transactions from API
-                                </p>
-                                <ol>
-                                    {transactions.map(({hash, type, data}) => <li>{type} - <a
-                                        href={`https://explorer.aptoslabs.com/txn/${hash}?network=devnet`}>{hash}</a> - {data}
-                                    </li>)}
-                                </ol>
-                            </Row>
-                        </Col>
-                    </Row>
+                                    </ol>
+                                </Row>
+                            </Col>
+                        </Row>
                 </>
             }
         </>
