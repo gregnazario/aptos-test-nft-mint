@@ -16,7 +16,7 @@ function App(this: any) {
     // TODO Consolidate a lot of these
     const [chainId, setChainId] = useState<number>(-1);
     const [walletLoadError, setWalletLoadError] = useState<string>("");
-    const [transactions, setTransactions] = useState<{ num: number, hash: string, type: string, data: string }[]>([]);
+    const [transactions] = useState<{ num: number, hash: string, type: string, data: string }[]>([]);
     const [wallet, setWallet] = useState<{
         name: string,
         tokens: {
