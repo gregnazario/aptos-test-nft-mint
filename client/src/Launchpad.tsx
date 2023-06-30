@@ -202,155 +202,151 @@ function Launchpad(this: any) {
 
     return (
         <>
+            <h2>"Launchpad"</h2>
             <Row align="middle">
-                <Col flex={"auto"} offset={2}>
-                    <h2>"Launchpad"</h2>
-                    <Row align="middle">
-                        <p>You can create dummy collections and tokens right here on this page for
-                            testing
-                            purposes. Collection needs Collection Name. Token needs both.</p>
-                    </Row>
-                    <Row align="middle">
-                        <Col span={4}>
-                            <p>Collection name:</p>
-                        </Col>
-                        <Col flex={"auto"}>
-                            <Input
-                                onChange={(event) => {
-                                    onStringChange(event, setCollectionName)
-                                }}
-                                style={{width: "calc(100% - 60px)"}}
-                                placeholder="Collection Name"
-                                size="large"
-                                defaultValue={"Test Collection"}
-                            />
-                        </Col>
-                    </Row>
-                    <Row align="middle">
-                        <Col span={4}>
-                            <p>Token name:</p>
-                        </Col>
-                        <Col flex={"auto"}>
-                            <Input
-                                onChange={(event) => {
-                                    onStringChange(event, setTokenName)
-                                }}
-                                style={{width: "calc(100% - 60px)"}}
-                                placeholder="Token Name"
-                                size="large"
-                                defaultValue={"Test Token #1"}
-                            />
-                        </Col>
-                    </Row>
-                    <Row align="middle">
-                        <Col span={4}>
-                            <p>URI:</p>
-                        </Col>
-                        <Col flex={"auto"}>
-                            <Input
-                                onChange={(event) => {
-                                    onStringChange(event, setTokenUri)
-                                }}
-                                style={{width: "calc(100% - 60px)"}}
-                                placeholder="Token URI"
-                                size="large"
-                                defaultValue={DEFAULT_IMAGE}
-                            />
-                        </Col>
-                    </Row>
-                    <Row align="middle">
-                        <Col span={4}>
-                            <p>Description:</p>
-                        </Col>
-                        <Col flex={"auto"}>
-                            <Input
-                                onChange={(event) => {
-                                    onStringChange(event, setDescription)
-                                }}
-                                style={{width: "calc(100% - 60px)"}}
-                                placeholder="Description"
-                                size="large"
-                                defaultValue={""}
-                            />
-                        </Col>
-                    </Row>
-                    <Row align="middle">
-                        <Col span={4}>
-                            <p>Royalty Percent:</p>
-                        </Col>
-                        <Col flex={"auto"}>
-                            <Input
-                                onChange={(event) => {
-                                    onNumberChange(event, setRoyaltyPercent)
-                                }}
-                                style={{width: "calc(100% - 60px)"}}
-                                placeholder="Royalty Percent (whole percent)"
-                                size="large"
-                                defaultValue={1}
-                            />
-                        </Col>
-                    </Row>
-                    <Row align="middle">
-                        <Col span={4}>
-                            <h3>Token V1</h3>
-                        </Col>
-                        <Col span={4}>
-                            <Button
-                                onClick={() => createV1Collection()}
-                                type="primary"
-                                style={{height: "40px", backgroundColor: "#3f67ff"}}
-                            >
-                                Create V1 Collection
-                            </Button>
-                        </Col>
-                    </Row>
-                    <Row align="middle">
-                        <Col span={4} offset={4}>
-                            <Button
-                                onClick={() => createV1Token()}
-                                type="primary"
-                                style={{height: "40px", backgroundColor: "#3f67ff"}}
-                            >
-                                Create V1 Token
-                            </Button>
-                        </Col>
-                    </Row>
-                    <Row align="middle">
-                        <Col span={4}>
-                            <h3>Token V2</h3>
-                        </Col>
-                        <Col span={4}>
-                            <Button
-                                onClick={() => createV2Collection()}
-                                type="primary"
-                                style={{height: "40px", backgroundColor: "#3f67ff"}}
-                            >
-                                Create V2 Collection
-                            </Button>
-                        </Col>
-                    </Row>
-                    <Row align="middle">
-                        <Col span={4} offset={4}>
-                            <Button
-                                onClick={() => createV2Token()}
-                                type="primary"
-                                style={{height: "40px", backgroundColor: "#3f67ff"}}
-                            >
-                                Create V2 Token
-                            </Button>
-                        </Col>
-                    </Row>
-                    <Row align="middle">
-                        <Col span={4} offset={4}>
-                            <Button
-                                onClick={() => createSoulboundV2Token()}
-                                type="primary"
-                                style={{height: "40px", backgroundColor: "#3f67ff"}}
-                            >
-                                Create Soulbound V2 Token
-                            </Button>
-                        </Col>
-                    </Row>
+                <p>You can create dummy collections and tokens right here on this page for
+                    testing
+                    purposes. Collection needs Collection Name. Token needs both.</p>
+            </Row>
+            <Row align="middle">
+                <Col span={4}>
+                    <p>Collection name:</p>
+                </Col>
+                <Col flex={"auto"}>
+                    <Input
+                        onChange={(event) => {
+                            onStringChange(event, setCollectionName)
+                        }}
+                        style={{width: "calc(100% - 60px)"}}
+                        placeholder="Collection Name"
+                        size="large"
+                        defaultValue={"Test Collection"}
+                    />
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={4}>
+                    <p>Token name:</p>
+                </Col>
+                <Col flex={"auto"}>
+                    <Input
+                        onChange={(event) => {
+                            onStringChange(event, setTokenName)
+                        }}
+                        style={{width: "calc(100% - 60px)"}}
+                        placeholder="Token Name"
+                        size="large"
+                        defaultValue={"Test Token #1"}
+                    />
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={4}>
+                    <p>URI:</p>
+                </Col>
+                <Col flex={"auto"}>
+                    <Input
+                        onChange={(event) => {
+                            onStringChange(event, setTokenUri)
+                        }}
+                        style={{width: "calc(100% - 60px)"}}
+                        placeholder="Token URI"
+                        size="large"
+                        defaultValue={DEFAULT_IMAGE}
+                    />
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={4}>
+                    <p>Description:</p>
+                </Col>
+                <Col flex={"auto"}>
+                    <Input
+                        onChange={(event) => {
+                            onStringChange(event, setDescription)
+                        }}
+                        style={{width: "calc(100% - 60px)"}}
+                        placeholder="Description"
+                        size="large"
+                        defaultValue={""}
+                    />
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={4}>
+                    <p>Royalty Percent:</p>
+                </Col>
+                <Col flex={"auto"}>
+                    <Input
+                        onChange={(event) => {
+                            onNumberChange(event, setRoyaltyPercent)
+                        }}
+                        style={{width: "calc(100% - 60px)"}}
+                        placeholder="Royalty Percent (whole percent)"
+                        size="large"
+                        defaultValue={1}
+                    />
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={4}>
+                    <h3>Token V1</h3>
+                </Col>
+                <Col span={4}>
+                    <Button
+                        onClick={() => createV1Collection()}
+                        type="primary"
+                        style={{height: "40px", backgroundColor: "#3f67ff"}}
+                    >
+                        Create V1 Collection
+                    </Button>
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={4} offset={4}>
+                    <Button
+                        onClick={() => createV1Token()}
+                        type="primary"
+                        style={{height: "40px", backgroundColor: "#3f67ff"}}
+                    >
+                        Create V1 Token
+                    </Button>
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={4}>
+                    <h3>Token V2</h3>
+                </Col>
+                <Col span={4}>
+                    <Button
+                        onClick={() => createV2Collection()}
+                        type="primary"
+                        style={{height: "40px", backgroundColor: "#3f67ff"}}
+                    >
+                        Create V2 Collection
+                    </Button>
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={4} offset={4}>
+                    <Button
+                        onClick={() => createV2Token()}
+                        type="primary"
+                        style={{height: "40px", backgroundColor: "#3f67ff"}}
+                    >
+                        Create V2 Token
+                    </Button>
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={4} offset={4}>
+                    <Button
+                        onClick={() => createSoulboundV2Token()}
+                        type="primary"
+                        style={{height: "40px", backgroundColor: "#3f67ff"}}
+                    >
+                        Create Soulbound V2 Token
+                    </Button>
                 </Col>
             </Row>
         </>
