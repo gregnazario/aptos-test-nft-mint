@@ -3,13 +3,15 @@ import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
 import {Network, Provider} from "aptos";
 import {useWallet} from "@aptos-labs/wallet-adapter-react";
 import {useState} from "react";
+import {Helper} from "./MarketplaceHelper"
 
 // TODO: Load network from wallet
 export const DEVNET_PROVIDER = new Provider(Network.DEVNET)
+export const MODULE_ADDRESS = "2b8ce856ae7536f41cddd1f7be1d9b69a46aa79a65e5b35f7f55732989751498";
+export const DEFAULT_FEE_SCHEDULE = "0xc261491e35296ffbb760715c2bb83b87ced70029e82e100ff53648b2f9e1a598";
+export const MARKETPLACE_HELPER = new Helper(DEVNET_PROVIDER, MODULE_ADDRESS);
 
 // TODO: make this more accessible / be deployed by others?
-export const moduleAddress = "0xb11affd5c514bb969e988710ef57813d9556cc1e3fe6dc9aa6a82b56aee53d98";
-
 function Marketplace(this: any) {
     // TODO Consolidate a lot of these
     const [collectionName, setCollectionName] = useState<string>("Test Collection");
@@ -18,7 +20,7 @@ function Marketplace(this: any) {
     const [creatorAddress, setCreatorAddress] = useState<string>("");
     const [tokenPropertyVersion, setTokenPropertyVersion] = useState<number>(0);
 
-    const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>("0x5640348ea9c52a2a6e173fc6c884122a1025266b664064af1a8168813899317a");
+    const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>(DEFAULT_FEE_SCHEDULE);
     const [tokenAddress, setTokenAddress] = useState<string>("");
     const [listingAddress, setListingAddress] = useState<string>("");
     const [listingPrice, setListingPrice] = useState<string>("100000000");
@@ -47,19 +49,9 @@ function Marketplace(this: any) {
     const createFeeSchedule = async () => {
         // Ensure you're logged in
         if (!account) return [];
+
         const type = "Create Fee schedule";
-        const payload = {
-            type: "entry_function_payload",
-            function: `${moduleAddress}::fee_schedule::init`,
-            type_arguments: [],
-            arguments: [
-                account.address, // Fee address
-                50, // Bid fee
-                125, // Listing fee
-                100, // Commission denominator
-                2, // Commission numerator
-            ],
-        };
+        const payload = await MARKETPLACE_HELPER.initFeeSchedule(account.address, BigInt(50), BigInt(125), BigInt(100), BigInt(2));
 
         let txn = await runTransaction(type, payload);
         if (txn !== undefined) {
@@ -78,21 +70,16 @@ function Marketplace(this: any) {
         // Ensure you're logged in
         if (!account) return [];
         const type = "Create fixed price V1 listing";
-        const payload = {
-            type: "entry_function_payload",
-            function: `${moduleAddress}::coin_listing::init_fixed_price_for_tokenv1`,
-            type_arguments: ["0x1::aptos_coin::AptosCoin"],
-            // TODO: allow different start time
-            arguments: [
+        const payload =
+            await MARKETPLACE_HELPER.initFixedPriceListingForTokenv1(
                 creatorAddress,
                 collectionName,
                 tokenName,
-                tokenPropertyVersion,
-                feeScheduleAddress,
-                Math.floor(new Date().getTime() / 1000),
-                listingPrice
-            ],
-        };
+                BigInt(tokenPropertyVersion),
+                feeScheduleAddress ,
+                BigInt(Math.floor(new Date().getTime() / 1000)),
+                BigInt(listingPrice)
+            );
 
         let txn = await runTransaction(type, payload);
         if (txn !== undefined) {
@@ -115,25 +102,19 @@ function Marketplace(this: any) {
 
         const now = Math.floor(new Date().getTime() / 1000);
 
-        const payload = {
-            type: "entry_function_payload",
-            function: `${moduleAddress}::coin_listing::init_auction_for_tokenv1`,
-            type_arguments: ["0x1::aptos_coin::AptosCoin"],
-            // TODO: allow different start time
-            arguments: [
-                creatorAddress,
-                collectionName,
-                tokenName,
-                tokenPropertyVersion,
-                feeScheduleAddress,
-                now,
-                listingPrice,
-                100,
-                now + auctionDuration,
-                auctionDuration,
-                []
-            ],
-        };
+        const payload = await MARKETPLACE_HELPER.initAuctionListingForTokenv1(
+            creatorAddress,
+            collectionName,
+            tokenName,
+            BigInt(tokenPropertyVersion),
+            feeScheduleAddress,
+            BigInt(now),
+            BigInt(listingPrice),
+            BigInt(100),
+            BigInt(now + auctionDuration),
+            BigInt(auctionDuration),
+            // TODO: Buy now
+        );
 
         let txn = await runTransaction(type, payload);
         if (txn !== undefined) {
@@ -154,13 +135,12 @@ function Marketplace(this: any) {
         // Ensure you're logged in
         if (!account || !tokenAddress) return [];
         const type = "Create fixed price V2 listing";
-        const payload = {
-            type: "entry_function_payload",
-            function: `${moduleAddress}::coin_listing::init_fixed_price`,
-            type_arguments: ["0x1::aptos_coin::AptosCoin"],
-            // TODO: allow different start time
-            arguments: [tokenAddress, feeScheduleAddress, Math.floor(new Date().getTime() / 1000), listingPrice],
-        };
+        const payload = await MARKETPLACE_HELPER.initFixedPriceListing(
+            tokenAddress,
+            feeScheduleAddress,
+            BigInt(Math.floor(new Date().getTime() / 1000)),
+            BigInt(listingPrice)
+        );
 
         let txn = await runTransaction(type, payload);
         if (txn !== undefined) {
@@ -183,22 +163,15 @@ function Marketplace(this: any) {
 
         const now = Math.floor(new Date().getTime() / 1000);
 
-        const payload = {
-            type: "entry_function_payload",
-            function: `${moduleAddress}::coin_listing::init_auction`,
-            type_arguments: ["0x1::aptos_coin::AptosCoin"],
-            // TODO: allow different start time
-            arguments: [
+        const payload = await MARKETPLACE_HELPER.initAuctionListing(
                 tokenAddress,
                 feeScheduleAddress,
-                now,
-                listingPrice,
-                1000000,
-                now + auctionDuration,
-                auctionDuration,
-                []
-            ],
-        };
+                BigInt(now),
+                BigInt(listingPrice),
+                BigInt(1000000),
+                BigInt(now + auctionDuration),
+                BigInt(auctionDuration)
+        );
 
         let txn = await runTransaction(type, payload);
         if (txn !== undefined) {
@@ -218,12 +191,7 @@ function Marketplace(this: any) {
         // Ensure you're logged in
         if (!account || !listingAddress) return [];
         const type = "Cancel fixed price listing";
-        const payload = {
-            type: "entry_function_payload",
-            function: `${moduleAddress}::coin_listing::end_fixed_price`,
-            type_arguments: ["0x1::aptos_coin::AptosCoin"],
-            arguments: [listingAddress],
-        };
+        const payload = await MARKETPLACE_HELPER.endFixedPriceListing(listingAddress);
         let txn = await runTransaction(type, payload);
         if (txn !== undefined) {
             await addToTransactions(type, txn.hash, "");
@@ -233,12 +201,7 @@ function Marketplace(this: any) {
         // Ensure you're logged in
         if (!account || !listingAddress) return [];
         const type = "Purchase listing";
-        const payload = {
-            type: "entry_function_payload",
-            function: `${moduleAddress}::coin_listing::purchase`,
-            type_arguments: ["0x1::aptos_coin::AptosCoin"],
-            arguments: [listingAddress],
-        };
+        const payload = await MARKETPLACE_HELPER.purchaseListing(listingAddress);
         let txn = await runTransaction(type, payload);
         if (txn !== undefined) {
             await addToTransactions(type, txn.hash, JSON.stringify(txn.changes));
@@ -247,6 +210,7 @@ function Marketplace(this: any) {
 
     const runTransaction = async (type: string, payload: any) => {
         try {
+            console.log("PAYLOAD")
             const response = await signAndSubmitTransaction(payload);
             console.log(`${type}: ${response.hash}`);
             await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
@@ -375,7 +339,7 @@ function Marketplace(this: any) {
                                 }}
                                 placeholder="Fee Schedule Address"
                                 size="large"
-                                defaultValue={"0x5640348ea9c52a2a6e173fc6c884122a1025266b664064af1a8168813899317a"}
+                                defaultValue={DEFAULT_FEE_SCHEDULE}
                             />
                         </Col>
                     </Row>
