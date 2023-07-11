@@ -7,8 +7,8 @@ import {Helper} from "./MarketplaceHelper"
 
 // TODO: Load network from wallet
 export const DEVNET_PROVIDER = new Provider(Network.DEVNET)
-export const MODULE_ADDRESS = "2b8ce856ae7536f41cddd1f7be1d9b69a46aa79a65e5b35f7f55732989751498";
-export const DEFAULT_FEE_SCHEDULE = "0xc261491e35296ffbb760715c2bb83b87ced70029e82e100ff53648b2f9e1a598";
+export const MODULE_ADDRESS = "b11affd5c514bb969e988710ef57813d9556cc1e3fe6dc9aa6a82b56aee53d98";
+export const DEFAULT_FEE_SCHEDULE = "0x764b2e41463c5636952a14ae62c9924a0efff04122ebe2236fe47064920567df";
 export const MARKETPLACE_HELPER = new Helper(DEVNET_PROVIDER, MODULE_ADDRESS);
 
 // TODO: make this more accessible / be deployed by others?
