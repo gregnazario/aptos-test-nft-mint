@@ -1,4 +1,4 @@
-import {Button, Col, Input, Row} from "antd";
+import {Alert, Button, Col, Input, Row} from "antd";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
 import {useWallet} from "@aptos-labs/wallet-adapter-react";
 import {useState} from "react";
@@ -7,7 +7,7 @@ import {Network, Provider} from "aptos";
 
 export const DEVNET_PROVIDER = new Provider(Network.DEVNET)
 export const MODULE_ADDRESS = "0x62a81c52504c07f6011f4f5928ecfceca8a63395b5ab14e6b166be25cf26d2d0";
-export const DEFAULT_FEE_SCHEDULE = "0x764b2e41463c5636952a14ae62c9924a0efff04122ebe2236fe47064920567df";
+export const DEFAULT_FEE_SCHEDULE = "0xed1e47f4e4ce47ab4259c5b0f00606cd5c29fc802f9892868631c4b7d491c97c";
 export const MARKETPLACE_HELPER = new Helper(DEVNET_PROVIDER, MODULE_ADDRESS);
 export const DEFAULT_COLLECTION = "Test Collection";
 export const DEFAULT_TOKEN_NAME = "Test Token #1";
@@ -16,30 +16,10 @@ export const DEFAULT_PRICE = "100000000";
 
 // TODO: make this more accessible / be deployed by others?
 function Marketplace(this: any) {
-    // TODO Consolidate a lot of these
-    const [collectionName, setCollectionName] = useState<string>(DEFAULT_COLLECTION);
-    const [tokenName, setTokenName] = useState<string>(DEFAULT_TOKEN_NAME);
-
-    const [creatorAddress, setCreatorAddress] = useState<string>("");
-    const [tokenPropertyVersion, setTokenPropertyVersion] = useState<number>(DEFAULT_PROPERTY_VERSION);
-
-    const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>(DEFAULT_FEE_SCHEDULE);
-    const [tokenAddress, setTokenAddress] = useState<string>("");
-    const [listingAddress, setListingAddress] = useState<string>("");
-    const [listingPrice, setListingPrice] = useState<string>(DEFAULT_PRICE);
     const [numTransaction, setNumTransaction] = useState<number>(0);
-    const [auctionDuration, setAuctionDuration] = useState<number>(3600);
+
     // TODO: pass in wallet from outside component
     const {account, signAndSubmitTransaction} = useWallet();
-    const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
-        const val = event.target.value;
-        setter(val);
-    }
-
-    const onNumberChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: number) => number) | number)) => void) => {
-        const val = event.target.value;
-        setter(Number(val));
-    }
 
     const addToTransactions = async (type: string, hash: string, data: string) => {
         const num = numTransaction;
@@ -67,27 +47,6 @@ function Marketplace(this: any) {
         }
     }
 
-    const cancelListing = async () => {
-        // Ensure you're logged in
-        if (!account || !listingAddress) return [];
-        const type = "Cancel fixed price listing";
-        const payload = await MARKETPLACE_HELPER.endFixedPriceListing(listingAddress);
-        let txn = await runTransaction(type, payload);
-        if (txn !== undefined) {
-            await addToTransactions(type, txn.hash, "");
-        }
-    }
-    const purchaseListing = async () => {
-        // Ensure you're logged in
-        if (!account || !listingAddress) return [];
-        const type = "Purchase listing";
-        const payload = await MARKETPLACE_HELPER.purchaseListing(listingAddress);
-        let txn = await runTransaction(type, payload);
-        if (txn !== undefined) {
-            await addToTransactions(type, txn.hash, JSON.stringify(txn.changes));
-        }
-    }
-
     const runTransaction = async (type: string, payload: any) => {
         try {
             console.log("PAYLOAD")
@@ -107,7 +66,7 @@ function Marketplace(this: any) {
         <>
             <Row align="middle">
                 <Col flex={"auto"}>
-                    <h1>"Deploy marketplace"</h1>
+                    <h1>Deploy marketplace fee schedule</h1>
                 </Col>
             </Row>
             <Row align="middle">
@@ -123,7 +82,7 @@ function Marketplace(this: any) {
             </Row>
             <Row align="middle">
                 <Col flex={"auto"}>
-                    <h2>"NFT Marketplace"</h2>
+                    <h1>NFT Marketplace</h1>
                     <Row align="middle">
                         <p>This acts as a marketplace. You must know the listings, no fancy UI will
                             be
@@ -131,53 +90,22 @@ function Marketplace(this: any) {
                             to find listings</p>
                     </Row>
                     <Row align="middle">
-                        <h3>Purchasing / Canceling Fixed Price Listing</h3>
-                    </Row>
-                    <Row align="middle">
-                        <Col span={4}>
-                            <p>Listing address: </p>
-                        </Col>
-                        <Col flex={"auto"}>
-                            <Input
-                                onChange={(event) => {
-                                    onStringChange(event, setListingAddress)
-                                }}
-                                style={{width: "calc(100% - 60px)"}}
-                                placeholder="Listing Address"
-                                size="large"
-                                defaultValue={""}
-                            />
-                        </Col>
-                    </Row>
-                    <Row align="middle">
-                        <Col span={2} offset={4}>
-                            <Button
-                                onClick={() => purchaseListing()}
-                                type="primary"
-                                style={{height: "40px", backgroundColor: "#3f67ff"}}
-                            >
-                                Buy Listing
-                            </Button>
-                        </Col>
-                        <Col span={2} offset={2}>
-                            <Button
-                                onClick={() => cancelListing()}
-                                type="primary"
-                                style={{height: "40px", backgroundColor: "#3f67ff"}}
-                            >
-                                Cancel Listing
-                            </Button>
-                        </Col>
-                    </Row>
-                    <Row>
                         <Col>
-                            <h2>Listing an NFT</h2>
+                            <h2>Listing NFTs</h2>
                         </Col>
                     </Row>
                     <V1FixedListing/>
                     <V1AuctionListing/>
                     <V2FixedListing/>
                     <V2AuctionListing/>
+                    <Row align="middle">
+                        <Col>
+                            <h2>Interacting with Listings</h2>
+                        </Col>
+                    </Row>
+                    <FixedPriceListingManagement/>
+                    <AuctionListingManagement/>
+                    <ExtractTokenV1/>
                 </Col>
             </Row>
         </>
@@ -185,6 +113,7 @@ function Marketplace(this: any) {
 }
 
 function V1FixedListing(this: any) {
+    const [message, setMessage] = useState<String>("");
     const [collectionName, setCollectionName] = useState<string>(DEFAULT_COLLECTION);
     const [tokenName, setTokenName] = useState<string>(DEFAULT_TOKEN_NAME);
 
@@ -228,6 +157,9 @@ function V1FixedListing(this: any) {
                     break
                 }
             }
+            setMessage(`Listing created at ${address}`)
+        } else {
+            setMessage("")
         }
     }
 
@@ -352,11 +284,20 @@ function V1FixedListing(this: any) {
                     </Button>
                 </Col>
             </Row>
+            {
+                message &&
+                <Row align="middle">
+                    <Col span={6} offset={4}>
+                        <Alert type={"info"} message={message}/>
+                    </Col>
+                </Row>
+            }
         </>
     );
 }
 
 function V1AuctionListing(this: any) {
+    const [message, setMessage] = useState<String>("");
     const [collectionName, setCollectionName] = useState<string>(DEFAULT_COLLECTION);
     const [tokenName, setTokenName] = useState<string>(DEFAULT_TOKEN_NAME);
 
@@ -407,6 +348,9 @@ function V1AuctionListing(this: any) {
                     break
                 }
             }
+            setMessage(`Listing created at ${address}`)
+        } else {
+            setMessage("")
         }
     }
 
@@ -546,12 +490,21 @@ function V1AuctionListing(this: any) {
                     </Button>
                 </Col>
             </Row>
+            {
+                message &&
+                <Row align="middle">
+                    <Col span={6} offset={4}>
+                        <Alert type={"info"} message={message}/>
+                    </Col>
+                </Row>
+            }
         </>
     );
 }
 
 
 function V2FixedListing(this: any) {
+    const [message, setMessage] = useState<String>("");
     const [tokenAddress, setTokenAddress] = useState<string>("");
 
     const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>(DEFAULT_FEE_SCHEDULE);
@@ -563,10 +516,6 @@ function V2FixedListing(this: any) {
         setter(val);
     }
 
-    const onNumberChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: number) => number) | number)) => void) => {
-        const val = event.target.value;
-        setter(Number(val));
-    }
     const createV2Listing = async () => {
         // Ensure you're logged in
         if (!account || !tokenAddress) return [];
@@ -587,6 +536,9 @@ function V2FixedListing(this: any) {
                     break
                 }
             }
+            setMessage(`Listing created at ${address}`)
+        } else {
+            setMessage("")
         }
     }
 
@@ -666,11 +618,20 @@ function V2FixedListing(this: any) {
                     </Button>
                 </Col>
             </Row>
+            {
+                message &&
+                <Row align="middle">
+                    <Col span={6} offset={4}>
+                        <Alert type={"info"} message={message}/>
+                    </Col>
+                </Row>
+            }
         </>
     );
 }
 
 function V2AuctionListing(this: any) {
+    const [message, setMessage] = useState<String>("");
     const [tokenAddress, setTokenAddress] = useState<string>("");
     const [auctionDuration, setAuctionDuration] = useState<number>(3600);
 
@@ -713,6 +674,9 @@ function V2AuctionListing(this: any) {
                     break
                 }
             }
+            setMessage(`Listing created at ${address}`)
+        } else {
+            setMessage("")
         }
     }
 
@@ -807,8 +771,274 @@ function V2AuctionListing(this: any) {
                     </Button>
                 </Col>
             </Row>
+            {
+                message &&
+                <Row align="middle">
+                    <Col span={6} offset={4}>
+                        <Alert type={"info"} message={message}/>
+                    </Col>
+                </Row>
+            }
         </>
     );
 }
+
+function FixedPriceListingManagement(this: any) {
+    const [listingAddress, setListingAddress] = useState<string>("");
+
+    // TODO: pass in wallet from outside component
+    const {account, signAndSubmitTransaction} = useWallet();
+    const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
+        const val = event.target.value;
+        setter(val);
+    }
+
+    const cancelListing = async () => {
+        // Ensure you're logged in
+        if (!account || !listingAddress) return [];
+        const type = "Cancel fixed price listing";
+        const payload = await MARKETPLACE_HELPER.endFixedPriceListing(listingAddress);
+        await runTransaction(type, payload);
+    }
+
+    const purchaseListing = async () => {
+        // Ensure you're logged in
+        if (!account || !listingAddress) return [];
+        const type = "Purchase listing";
+        const payload = await MARKETPLACE_HELPER.purchaseListing(listingAddress);
+        await runTransaction(type, payload);
+    }
+
+    const runTransaction = async (type: string, payload: any) => {
+        try {
+            const response = await signAndSubmitTransaction(payload);
+            await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
+            let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
+            return txn;
+        } catch (error: any) {
+            console.log("Failed to wait for txn" + error)
+        }
+
+        return undefined;
+    }
+
+    return (
+        <>
+            <Row align="middle">
+                <h3>Purchasing / Canceling Fixed Price Listing</h3>
+            </Row>
+            <Row align="middle">
+                <Col span={4}>
+                    <p>Listing address: </p>
+                </Col>
+                <Col flex={"auto"}>
+                    <Input
+                        onChange={(event) => {
+                            onStringChange(event, setListingAddress)
+                        }}
+                        style={{width: "calc(100% - 60px)"}}
+                        placeholder="Listing Address"
+                        size="large"
+                        defaultValue={""}
+                    />
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={2} offset={4}>
+                    <Button
+                        onClick={() => purchaseListing()}
+                        type="primary"
+                        style={{height: "40px", backgroundColor: "#3f67ff"}}
+                    >
+                        Buy Listing
+                    </Button>
+                </Col>
+                <Col span={2} offset={2}>
+                    <Button
+                        onClick={() => cancelListing()}
+                        type="primary"
+                        style={{height: "40px", backgroundColor: "#3f67ff"}}
+                    >
+                        Cancel Listing
+                    </Button>
+                </Col>
+            </Row>
+        </>
+    );
+}
+
+function AuctionListingManagement(this: any) {
+    const [listingAddress, setListingAddress] = useState<string>("");
+    const [bidAmount, setBidAmount] = useState<bigint>(BigInt(0));
+
+    // TODO: pass in wallet from outside component
+    const {account, signAndSubmitTransaction} = useWallet();
+    const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
+        const val = event.target.value;
+        setter(val);
+    }
+
+    const onBigIntChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: bigint) => bigint) | bigint)) => void) => {
+        const val = event.target.value;
+        setter(BigInt(val));
+    }
+
+    const completeAuction = async () => {
+        // Ensure you're logged in
+        if (!account || !listingAddress) return [];
+        const type = "Complete auction";
+        const payload = await MARKETPLACE_HELPER.completeAuctionListing(listingAddress);
+        await runTransaction(type, payload);
+    }
+
+    const bidAuction = async () => {
+        // Ensure you're logged in
+        if (!account || !listingAddress) return [];
+        const type = "Bid";
+        const payload = await MARKETPLACE_HELPER.bidAuctionListing(account.address, listingAddress, bidAmount);
+        await runTransaction(type, payload);
+    }
+
+    const runTransaction = async (type: string, payload: any) => {
+        try {
+            const response = await signAndSubmitTransaction(payload);
+            await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
+            let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
+            return txn;
+        } catch (error: any) {
+            console.log("Failed to wait for txn" + error)
+        }
+
+        return undefined;
+    }
+
+    return (
+        <>
+            <Row align="middle">
+                <h3>Auction Bids and Completion</h3>
+            </Row>
+            <Row align="middle">
+                <Col span={4}>
+                    <p>Listing address: </p>
+                </Col>
+                <Col flex={"auto"}>
+                    <Input
+                        onChange={(event) => {
+                            onStringChange(event, setListingAddress)
+                        }}
+                        style={{width: "calc(100% - 60px)"}}
+                        placeholder="Listing Address"
+                        size="large"
+                        defaultValue={""}
+                    />
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={4}>
+                    <p>Bid amount: </p>
+                </Col>
+                <Col flex={"auto"}>
+                    <Input
+                        onChange={(event) => {
+                            onBigIntChange(event, setBidAmount)
+                        }}
+                        style={{width: "calc(100% - 60px)"}}
+                        placeholder="Bid amount"
+                        size="large"
+                        defaultValue={0}
+                    />
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={2} offset={4}>
+                    <Button
+                        onClick={() => bidAuction()}
+                        type="primary"
+                        style={{height: "40px", backgroundColor: "#3f67ff"}}
+                    >
+                        Buy Listing
+                    </Button>
+                </Col>
+                <Col span={2} offset={2}>
+                    <Button
+                        onClick={() => completeAuction()}
+                        type="primary"
+                        style={{height: "40px", backgroundColor: "#3f67ff"}}
+                    >
+                        Cancel Listing
+                    </Button>
+                </Col>
+            </Row>
+        </>
+    );
+}
+
+
+function ExtractTokenV1(this: any) {
+    const [objectAddress, setObjectAddress] = useState<string>("");
+
+    // TODO: pass in wallet from outside component
+    const {account, signAndSubmitTransaction} = useWallet();
+    const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
+        const val = event.target.value;
+        setter(val);
+    }
+
+    const extractToken = async () => {
+        // Ensure you're logged in
+        if (!account || !objectAddress) return [];
+        const type = "Extract token";
+        const payload = await MARKETPLACE_HELPER.extract_tokenv1(objectAddress);
+        await runTransaction(type, payload);
+    }
+    const runTransaction = async (type: string, payload: any) => {
+        try {
+            const response = await signAndSubmitTransaction(payload);
+            await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
+            let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
+            return txn;
+        } catch (error: any) {
+            console.log("Failed to wait for txn" + error)
+        }
+
+        return undefined;
+    }
+
+    return (
+        <>
+            <Row align="middle">
+                <h3>Unwrap TokenV1</h3>
+            </Row>
+            <Row align="middle">
+                <Col span={4}>
+                    <p>Token V1 wrapper object address: </p>
+                </Col>
+                <Col flex={"auto"}>
+                    <Input
+                        onChange={(event) => {
+                            onStringChange(event, setObjectAddress)
+                        }}
+                        style={{width: "calc(100% - 60px)"}}
+                        placeholder="Token V1 wrapper object address"
+                        size="large"
+                        defaultValue={""}
+                    />
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={2} offset={4}>
+                    <Button
+                        onClick={() => extractToken()}
+                        type="primary"
+                        style={{height: "40px", backgroundColor: "#3f67ff"}}
+                    >
+                        Extract token v1
+                    </Button>
+                </Col>
+            </Row>
+        </>
+    );
+}
+
 
 export default Marketplace;

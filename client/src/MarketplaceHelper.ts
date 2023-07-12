@@ -165,7 +165,7 @@ export class Helper {
         );
     }
 
-    completeAuctionListing(listing: MaybeHexString, bid_amount: bigint, coin: string = APTOS_COIN): TransactionPayload {
+    completeAuctionListing(listing: MaybeHexString, coin: string = APTOS_COIN): TransactionPayload {
         return this.buildTransactionPayload(COIN_LISTING, "complete_auction", [coin], [HexString.ensure(listing).hex()]);
     }
 

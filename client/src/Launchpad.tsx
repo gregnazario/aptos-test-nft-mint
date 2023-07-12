@@ -196,7 +196,7 @@ function Launchpad(this: any) {
 
     return (
         <>
-            <h2>"Launchpad"</h2>
+            <h2>Launchpad</h2>
             <Row align="middle">
                 <p>You can create dummy collections and tokens right here on this page for
                     testing

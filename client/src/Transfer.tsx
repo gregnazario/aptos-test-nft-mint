@@ -23,7 +23,7 @@ function Transfer(this: any) {
             type_arguments: ["0x1::object::ObjectCore"],
             arguments: [objectAddress, destinationAddress],
         };
-        let txn = await runTransaction(type, payload);
+        await runTransaction(type, payload);
     }
 
     const runTransaction = async (type: string, payload: any) => {
