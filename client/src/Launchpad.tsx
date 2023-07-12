@@ -1,11 +1,8 @@
 import {Button, Col, Input, Row} from "antd";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
-import {Network, Provider} from "aptos";
 import {useWallet} from "@aptos-labs/wallet-adapter-react";
 import {useState} from "react";
-
-// TODO: Load network from wallet
-export const DEVNET_PROVIDER = new Provider(Network.DEVNET)
+import {DEVNET_PROVIDER} from "./Marketplace";
 
 // TODO: make this more accessible / be deployed by others?
 const DEFAULT_IMAGE = "https://3zglr2262zd6f45qo6nqfycybj4acwnughgzual3oxdmu7wlz36a.arweave.net/3ky4617WR-LzsHebAuBYCngBWbQxzZoBe3XGyn7Lzvw/0.png"
@@ -20,7 +17,6 @@ function Launchpad(this: any) {
     const [description, setDescription] = useState<string>("");
     const [tokenUri, setTokenUri] = useState<string>(DEFAULT_IMAGE);
     const [numTransaction, setNumTransaction] = useState<number>(0);
-    const [transactions, setTransactions] = useState<{ num: number, hash: string, type: string, data: string }[]>([]);
     const {account, signAndSubmitTransaction} = useWallet();
     const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
         const val = event.target.value;
@@ -33,10 +29,8 @@ function Launchpad(this: any) {
     }
 
     const addToTransactions = async (type: string, hash: string, data: string) => {
-        const txns = transactions;
         const num = numTransaction;
-        txns.push({num: num, hash: hash, type: type, data: data});
-        setTransactions(txns);
+        console.log(JSON.stringify({num: num, hash: hash, type: type, data: data}));
         setNumTransaction(num + 1);
     }
 

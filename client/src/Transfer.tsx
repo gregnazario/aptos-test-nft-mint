@@ -1,28 +1,16 @@
 import {Button, Col, Input, Row} from "antd";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
-import {Network, Provider} from "aptos";
 import {useWallet} from "@aptos-labs/wallet-adapter-react";
 import {useState} from "react";
-
-export const DEVNET_PROVIDER = new Provider(Network.DEVNET)
+import {DEVNET_PROVIDER} from "./Marketplace";
 
 function Transfer(this: any) {
     const [objectAddress, setObjectAddress] = useState<string>("");
     const [destinationAddress, setDestinationAddress] = useState<string>("");
-    const [numTransaction, setNumTransaction] = useState<number>(0);
-    const [transactions, setTransactions] = useState<{ num: number, hash: string, type: string, data: string }[]>([]);
     const {account, signAndSubmitTransaction} = useWallet();
     const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
         const val = event.target.value;
         setter(val);
-    }
-
-    const addToTransactions = async (type: string, hash: string, data: string) => {
-        const txns = transactions;
-        const num = numTransaction;
-        txns.push({num: num, hash: hash, type: type, data: data});
-        setTransactions(txns);
-        setNumTransaction(num + 1);
     }
 
     const transferObject = async () => {
@@ -36,9 +24,6 @@ function Transfer(this: any) {
             arguments: [objectAddress, destinationAddress],
         };
         let txn = await runTransaction(type, payload);
-        if (txn !== undefined) {
-            await addToTransactions(type, txn.hash, "");
-        }
     }
 
     const runTransaction = async (type: string, payload: any) => {
@@ -95,7 +80,7 @@ function Transfer(this: any) {
                 </Col>
             </Row>
             <Row align="middle">
-                <Col span={2} offset={4}>
+                <Col span={4} offset={4}>
                     <Button
                         onClick={() => transferObject()}
                         type="primary"

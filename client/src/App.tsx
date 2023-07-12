@@ -1,22 +1,20 @@
 import {Alert, Button, Col, Layout, Row} from "antd";
 import {WalletSelector} from "@aptos-labs/wallet-adapter-ant-design";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
-import {FaucetClient, Network, Provider} from "aptos";
+import {FaucetClient} from "aptos";
 import {useWallet} from "@aptos-labs/wallet-adapter-react";
 import {useEffect, useState} from "react";
 import Launchpad from './Launchpad';
 import Marketplace from './Marketplace';
 import Transfer from './Transfer';
-
+import {DEVNET_PROVIDER} from "./Marketplace";
 // TODO: Load network from wallet
-export const DEVNET_PROVIDER = new Provider(Network.DEVNET)
 export const FAUCET = new FaucetClient("https://fullnode.devnet.aptoslabs.com", "https://faucet.devnet.aptoslabs.com");
 
 function App(this: any) {
     // TODO Consolidate a lot of these
     const [chainId, setChainId] = useState<number>(-1);
     const [walletLoadError, setWalletLoadError] = useState<string>("");
-    const [transactions] = useState<{ num: number, hash: string, type: string, data: string }[]>([]);
     const [wallet, setWallet] = useState<{
         name: string,
         tokens: {
@@ -160,80 +158,66 @@ function App(this: any) {
             }
             { // TODO: Add back spinner
                 connected && isDevnet() &&
-                <>
-                    {walletLoadError && <Row>
+                <Layout>
+                    {walletLoadError && <Row align="middle">
                         <Alert
                             message={`Wallet failed to load for ${account?.address}.  Please try connecting again or funding the account ${walletLoadError}`}
                             type="warning"/>
                     </Row>}
-                    <Row>
-                        <Col span={12}>
-                            <Row align="middle">
-                                <Col offset={2}>
-                                    <Launchpad></Launchpad>
-                                </Col>
-                            </Row>
-                            <Row align="middle">
-                                <Col offset={2}>
-                                    <Marketplace></Marketplace>
-                                </Col>
-                            </Row>
-                            <Row align="middle">
-                                <Col offset={2}>
-                                    <Transfer></Transfer>
-                                </Col>
-                            </Row>
-                        </Col>
-                        <Col span={12}>
-                            <Row>
-                                <h2>Wallet {wallet?.name}</h2>
-                            </Row>
-                            <Row>
-                                <Button
-                                    onClick={() => loadWalletNfts()}
-                                    type="primary"
-                                    style={{height: "40px", backgroundColor: "#3f67ff"}}
-                                >
-                                    Force refresh NFTs
-                                </Button>
-                            </Row>
-                            <Row>
-                                <ol>
-                                    {wallet?.tokens.map(({
-                                                             standard,
-                                                             collection,
-                                                             name,
-                                                             data_id,
-                                                             uri,
-                                                             type,
-                                                             creator_address,
-                                                             property_version
-                                                         }) =>
-                                        <li>{standard} | {type} | {'"' + collection + "'"} - {'"' + name + '"'} - {"CREATOR: " + creator_address} - {"VERSION: " + property_version}
-                                            <img
-                                                width={50}
-                                                src={uri}
-                                                alt={"img"}/> - {data_id}
-                                        </li>)}
-                                </ol>
-                            </Row>
-                            <Row>
-                                <h2>Transaction Log</h2>
-                                <p>This keeps track of all the transactions that have occurred, but there's no
-                                    cookies
-                                    or
-                                    lookup, so page refreshes will make it disappear
-                                    TODO: Load recent transactions from API
-                                </p>
-                                <ol>
-                                    {transactions.map(({hash, type, data}) => <li>{type} - <a
-                                        href={`https://explorer.aptoslabs.com/txn/${hash}?network=devnet`}>{hash}</a> - {data}
-                                    </li>)}
-                                </ol>
-                            </Row>
+                    <Row align="middle">
+                        <Col offset={2}>
+                            <h2>Wallet {wallet?.name}</h2>
                         </Col>
                     </Row>
-                </>
+                    <Row align="middle">
+                        <Col offset={2}>
+                            <Button
+                                onClick={() => loadWalletNfts()}
+                                type="primary"
+                                style={{height: "40px", backgroundColor: "#3f67ff"}}
+                            >
+                                Force refresh NFTs
+                            </Button>
+                        </Col>
+                    </Row>
+                    <Row>
+                        <Col offset={2}>
+                            <ol>
+                                {wallet?.tokens.map(({
+                                                         standard,
+                                                         collection,
+                                                         name,
+                                                         data_id,
+                                                         uri,
+                                                         type,
+                                                         creator_address,
+                                                         property_version
+                                                     }) =>
+                                    <li>{standard} | {type} | {'"' + collection + "'"} - {'"' + name + '"'} - {"CREATOR: " + creator_address} - {"VERSION: " + property_version}
+                                        <img
+                                            width={50}
+                                            src={uri}
+                                            alt={"img"}/> - {data_id}
+                                    </li>)}
+                            </ol>
+                        </Col>
+                    </Row>
+                    <Row align="middle">
+                        <Col offset={2}>
+                            <Launchpad></Launchpad>
+                        </Col>
+                    </Row>
+                    <Row align="middle">
+                        <Col offset={2}>
+                            <Marketplace></Marketplace>
+                        </Col>
+                    </Row>
+                    <Row align="middle">
+                        <Col offset={2}>
+                            <Transfer/>
+                        </Col>
+                    </Row>
+                </Layout>
             }
         </>
     );
