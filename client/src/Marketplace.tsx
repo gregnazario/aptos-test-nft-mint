@@ -9,8 +9,8 @@ export const DEVNET_PROVIDER = new Provider({
     fullnodeUrl: "https://fullnode.devnet.aptoslabs.com",
     indexerUrl: "https://ideal-cricket-94.hasura.app/v1/graphql"
 })
-export const MODULE_ADDRESS = "0x62a81c52504c07f6011f4f5928ecfceca8a63395b5ab14e6b166be25cf26d2d0";
-export const DEFAULT_FEE_SCHEDULE = "0x1de9ea4b122ca8adc66a7973d18a93ba0f4f1940067c1cf1aa1dd71e9559154e";
+export const MODULE_ADDRESS = "0xeb36546237930294a8a9fec1e5d42d9633e9e9355eec3fa80f2610a29d95e152";
+export const DEFAULT_FEE_SCHEDULE = "0x96e6143a72d9cb40872972c241112ecb43cc0ca8aca376a940a182d620ccef1c";
 export const MARKETPLACE_HELPER = new Helper(DEVNET_PROVIDER, MODULE_ADDRESS);
 export const DEFAULT_COLLECTION = "Test Collection";
 export const DEFAULT_TOKEN_NAME = "Test Token #1";
