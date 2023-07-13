@@ -1,4 +1,4 @@
-import {Alert, Button, Col, Input, Row} from "antd";
+import {Alert, Button, Col, Input, Row, Select} from "antd";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
 import {useWallet} from "@aptos-labs/wallet-adapter-react";
 import {useState} from "react";
@@ -17,8 +17,17 @@ export const DEFAULT_TOKEN_NAME = "Test Token #1";
 export const DEFAULT_PROPERTY_VERSION = 0;
 export const DEFAULT_PRICE = "100000000";
 
+const V1 = "V1";
+const V2 = "V2";
+const FIXED_PRICE = "Fixed Price";
+const AUCTION = "Auction";
+const TOKEN_OFFERS = "Token Offers";
+const COLLECTION_OFFERS = "Collection Offers";
+
 // TODO: make this more accessible / be deployed by others?
 function Marketplace(this: any) {
+    const [tokenStandard, setTokenStandard] = useState<string>(V2);
+    const [type, setType] = useState<string>(FIXED_PRICE);
     const [feeSchedule, setFeeSchedule] = useState<string>(DEFAULT_FEE_SCHEDULE);
     const [feeScheduleDetails, setFeeScheduleDetails] = useState<{
         fee_address: HexString,
@@ -73,8 +82,6 @@ function Marketplace(this: any) {
     }
 
 
-
-
     const runTransaction = async (type: string, payload: any) => {
         try {
             console.log("PAYLOAD")
@@ -108,7 +115,7 @@ function Marketplace(this: any) {
                         }}
                         placeholder="Fee schedule address"
                         size="large"
-                        defaultValue={account?.address}
+                        defaultValue={DEFAULT_FEE_SCHEDULE}
                     />
                     <Button
                         onClick={() => loadFeeSchedule()}
@@ -143,33 +150,62 @@ function Marketplace(this: any) {
             </Row>
             <Row align="middle">
                 <Col flex={"auto"}>
-                    <h1>NFT Marketplace</h1>
                     <Row align="middle">
+                        <h1>NFT Marketplace</h1>
                         <p>This acts as a marketplace. You must know the listings, no fancy UI will
-                            be
-                            provided
-                            to find listings</p>
+                            be provided to find listings</p>
                     </Row>
+                    <Row>
+                        <Col>
+                            <Select
+                                defaultValue={V2}
+                                style={{width: 120}}
+                                onChange={setTokenStandard}
+                                options={[
+                                    {value: V1, label: V1},
+                                    {value: V2, label: V2},
+                                ]}
+                            />
+                        </Col>
+                        <Col>
+                            <Select
+                                defaultValue={FIXED_PRICE}
+                                onChange={setType}
+                                options={[
+                                    {value: FIXED_PRICE, label: FIXED_PRICE},
+                                    {value: AUCTION, label: AUCTION},
+                                    {value: TOKEN_OFFERS, label: TOKEN_OFFERS},
+                                    {value: COLLECTION_OFFERS, label: COLLECTION_OFFERS},
+                                ]}
+                            />
+                        </Col>
+                    </Row>
+
                     <Row align="middle">
                         <Col>
                             <h2>Listing NFTs</h2>
                         </Col>
                     </Row>
-                    <V1FixedListing/>
-                    <V1AuctionListing/>
-                    <V2FixedListing/>
-                    <V2AuctionListing/>
+                    {tokenStandard === V1 && type === FIXED_PRICE && <V1FixedListing/>}
+                    {tokenStandard === V1 && type === AUCTION && <V1AuctionListing/>}
+                    {tokenStandard === V1 && type === TOKEN_OFFERS && <Alert type="error" message="Not implemented"/>}
+                    {tokenStandard === V1 && type === COLLECTION_OFFERS &&
+                        <Alert type="error" message="Not implemented"/>}
+                    {tokenStandard === V2 && type === FIXED_PRICE && <V2FixedListing/>}
+                    {tokenStandard === V2 && type === AUCTION && <V2AuctionListing/>}
+                    {tokenStandard === V2 && type === TOKEN_OFFERS && <Alert type="error" message="Not implemented"/>}
+                    {tokenStandard === V2 && type === COLLECTION_OFFERS && <V2CollectionOffers/>}
                     <Row align="middle">
                         <Col>
                             <h2>Interacting with Listings</h2>
                         </Col>
                     </Row>
-                    <FixedPriceListingManagement/>
-                    <AuctionListingManagement/>
-                    <ExtractTokenV1/>
-                    <Listings/>
-                    <TokenOffers/>
-                    <CollectionOffers/>
+                    {type === FIXED_PRICE && <FixedPriceListingManagement/>}
+                    {type === AUCTION && <AuctionListingManagement/>}
+                    {tokenStandard === V1 && <ExtractTokenV1/>}
+                    {(type === FIXED_PRICE || type === AUCTION) && <Listings/>}
+                    {type === TOKEN_OFFERS && <TokenOffers/>}
+                    {type === COLLECTION_OFFERS && <CollectionOffers/>}
                 </Col>
             </Row>
         </>
@@ -1137,6 +1173,144 @@ function Listings(this: any) {
     );
 }
 
+function V2CollectionOffers(this: any) {
+    const [collectionAddress, setCollectionAddress] = useState<string>("");
+    const [feeSchedule, setFeeSchedule] = useState<string>(DEFAULT_FEE_SCHEDULE);
+    const [price, setPrice] = useState<bigint>(BigInt(DEFAULT_PRICE));
+    const [amount, setAmount] = useState<bigint>(BigInt(1));
+    const [expirationSecs, setExpirationSecs] = useState<bigint>(BigInt(3600));
+    const {account, signAndSubmitTransaction} = useWallet();
+
+    const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
+        const val = event.target.value;
+        setter(val);
+    }
+    const onBigIntChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: bigint) => bigint) | bigint)) => void) => {
+        const val = event.target.value;
+        setter(BigInt(val));
+    }
+
+    const createCollectionOffer = async () => {
+        // Ensure you're logged in
+        if (!account || !collectionAddress) return [];
+        const type = "Purchase listing";
+        const expiration_time = BigInt(Math.floor(new Date().getTime() / 1000)) + expirationSecs;
+        const payload = await MARKETPLACE_HELPER.initCollectionOfferForTokenv2(collectionAddress, feeSchedule, price, amount, expiration_time);
+        await runTransaction(type, payload);
+    }
+
+    const runTransaction = async (type: string, payload: any) => {
+        try {
+            const response = await signAndSubmitTransaction(payload);
+            await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
+            let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
+            return txn;
+        } catch (error: any) {
+            console.log("Failed to wait for txn" + error)
+        }
+
+        return undefined;
+    }
+
+    return (
+        <>
+            <Row align="middle">
+                <h3>Token Offers</h3>
+            </Row>
+            <Row align="middle">
+                <Col span={4}>
+                    <p>Fee Schedule: </p>
+                </Col>
+                <Col flex={"auto"}>
+                    <Input
+                        onChange={(event) => {
+                            onStringChange(event, setFeeSchedule)
+                        }}
+                        style={{width: "calc(100% - 60px)"}}
+                        placeholder="FeeSchedule"
+                        size="large"
+                        defaultValue={DEFAULT_FEE_SCHEDULE}
+                    />
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={4}>
+                    <p>Collection Address: </p>
+                </Col>
+                <Col flex={"auto"}>
+                    <Input
+                        onChange={(event) => {
+                            onStringChange(event, setCollectionAddress)
+                        }}
+                        style={{width: "calc(100% - 60px)"}}
+                        placeholder="CollectionAddress"
+                        size="large"
+                        defaultValue={""}
+                    />
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={4}>
+                    <p>Price: </p>
+                </Col>
+                <Col flex={"auto"}>
+                    <Input
+                        onChange={(event) => {
+                            onBigIntChange(event, setPrice)
+                        }}
+                        style={{width: "calc(100% - 60px)"}}
+                        placeholder="Price"
+                        size="large"
+                        defaultValue={DEFAULT_PRICE}
+                    />
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={4}>
+                    <p>Expiration secs: </p>
+                </Col>
+                <Col flex={"auto"}>
+                    <Input
+                        onChange={(event) => {
+                            onBigIntChange(event, setExpirationSecs)
+                        }}
+                        style={{width: "calc(100% - 60px)"}}
+                        placeholder="Expiration secs"
+                        size="large"
+                        defaultValue={3600}
+                    />
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={4}>
+                    <p>Amount: </p>
+                </Col>
+                <Col flex={"auto"}>
+                    <Input
+                        onChange={(event) => {
+                            onBigIntChange(event, setAmount)
+                        }}
+                        style={{width: "calc(100% - 60px)"}}
+                        placeholder="amount"
+                        size="large"
+                        defaultValue={1}
+                    />
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={2} offset={4}>
+                    <Button
+                        onClick={() => createCollectionOffer()}
+                        type="primary"
+                        style={{height: "40px", backgroundColor: "#3f67ff"}}
+                    >
+                        Create Collection offer
+                    </Button>
+                </Col>
+            </Row>
+        </>
+    );
+}
 
 function TokenOffers(this: any) {
     const [tokenOffers, setTokenOffers] = useState<any>("");

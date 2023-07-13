@@ -1,4 +1,4 @@
-import {Alert, Button, Col, Layout, Row} from "antd";
+import {Alert, Button, Col, Image, Layout, Row, Tooltip} from "antd";
 import {WalletSelector} from "@aptos-labs/wallet-adapter-ant-design";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
 import {FaucetClient} from "aptos";
@@ -193,11 +193,19 @@ function App(this: any) {
                                                          creator_address,
                                                          property_version
                                                      }) =>
-                                    <li>{standard} | {type} | {'"' + collection + "'"} - {'"' + name + '"'} - {"CREATOR: " + creator_address} - {"VERSION: " + property_version}
-                                        <img
-                                            width={50}
-                                            src={uri}
-                                            alt={"img"}/> - {data_id}
+                                    <li>
+                                        <Tooltip placement="right" title={`${standard} ${type}\n
+                                        Creator: ${creator_address}\n
+                                        Collection: ${collection}\n
+                                        Property version: ${property_version}
+                                        `}>
+                                            <Image
+                                                width={50}
+                                                src={uri}
+                                                alt={"img"}
+                                            />
+                                            Name: {name} | Id: <b>{data_id}</b>
+                                        </Tooltip>
                                     </li>)}
                             </ol>
                         </Col>
