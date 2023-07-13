@@ -2,12 +2,15 @@ import {Alert, Button, Col, Input, Row} from "antd";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
 import {useWallet} from "@aptos-labs/wallet-adapter-react";
 import {useState} from "react";
-import {Helper} from "./MarketplaceHelper"
-import {Network, Provider} from "aptos";
+import {Marketplace as Helper} from "./MarketplaceHelper"
+import {HexString, Provider} from "aptos";
 
-export const DEVNET_PROVIDER = new Provider(Network.DEVNET)
+export const DEVNET_PROVIDER = new Provider({
+    fullnodeUrl: "https://fullnode.devnet.aptoslabs.com",
+    indexerUrl: "https://ideal-cricket-94.hasura.app/v1/graphql"
+})
 export const MODULE_ADDRESS = "0x62a81c52504c07f6011f4f5928ecfceca8a63395b5ab14e6b166be25cf26d2d0";
-export const DEFAULT_FEE_SCHEDULE = "0xed1e47f4e4ce47ab4259c5b0f00606cd5c29fc802f9892868631c4b7d491c97c";
+export const DEFAULT_FEE_SCHEDULE = "0x1de9ea4b122ca8adc66a7973d18a93ba0f4f1940067c1cf1aa1dd71e9559154e";
 export const MARKETPLACE_HELPER = new Helper(DEVNET_PROVIDER, MODULE_ADDRESS);
 export const DEFAULT_COLLECTION = "Test Collection";
 export const DEFAULT_TOKEN_NAME = "Test Token #1";
@@ -16,15 +19,36 @@ export const DEFAULT_PRICE = "100000000";
 
 // TODO: make this more accessible / be deployed by others?
 function Marketplace(this: any) {
-    const [numTransaction, setNumTransaction] = useState<number>(0);
-
+    const [feeSchedule, setFeeSchedule] = useState<string>(DEFAULT_FEE_SCHEDULE);
+    const [feeScheduleDetails, setFeeScheduleDetails] = useState<{
+        fee_address: HexString,
+        listing_fee: string,
+        bidding_fee: string,
+        commission: string
+    }>();
     // TODO: pass in wallet from outside component
     const {account, signAndSubmitTransaction} = useWallet();
 
-    const addToTransactions = async (type: string, hash: string, data: string) => {
-        const num = numTransaction;
-        console.log(JSON.stringify({num: num, hash: hash, type: type, data: data}))
-        setNumTransaction(num + 1);
+    const loadFeeSchedule = async () => {
+        // Ensure you're logged in
+        if (!account) return [];
+
+        let fee_address = await MARKETPLACE_HELPER.feeAddress(feeSchedule);
+        let listing_fee = await MARKETPLACE_HELPER.listingFee(feeSchedule);
+        let bidding_fee = await MARKETPLACE_HELPER.biddingFee(feeSchedule);
+        let commission = await MARKETPLACE_HELPER.commission(feeSchedule, BigInt(DEFAULT_PRICE));
+
+        setFeeScheduleDetails({
+            fee_address: fee_address,
+            listing_fee: listing_fee.toString(),
+            bidding_fee: bidding_fee.toString(),
+            commission: commission.toString()
+        })
+    }
+
+    const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
+        const val = event.target.value;
+        setter(val);
     }
 
     const createFeeSchedule = async () => {
@@ -43,9 +67,13 @@ function Marketplace(this: any) {
                     break;
                 }
             }
-            await addToTransactions(type, txn.hash, `Fee schedule address: ${address}`);
+            // TODO: Show in UI
+            console.log(`New fee schedule ${address}`);
         }
     }
+
+
+
 
     const runTransaction = async (type: string, payload: any) => {
         try {
@@ -69,6 +97,39 @@ function Marketplace(this: any) {
                     <h1>Deploy marketplace fee schedule</h1>
                 </Col>
             </Row>
+            <Row align="middle">
+                <Col flex={"auto"}>
+                    <p>Fee schedule address: </p>
+                </Col>
+                <Col flex={"auto"}>
+                    <Input
+                        onChange={(event) => {
+                            onStringChange(event, setFeeSchedule)
+                        }}
+                        placeholder="Fee schedule address"
+                        size="large"
+                        defaultValue={account?.address}
+                    />
+                    <Button
+                        onClick={() => loadFeeSchedule()}
+                        type="primary"
+                        style={{height: "40px", backgroundColor: "#3f67ff"}}
+                    >
+                        Lookup an existing fee schedule
+                    </Button>
+                </Col>
+            </Row>
+            {feeScheduleDetails && <Row align="middle">
+                <Col flex={"auto"}>
+                    <p>Fee schedule details:</p>
+                    <ol>
+                        <li>{`Fees are sent to ${feeScheduleDetails?.fee_address}`}</li>
+                        <li>{`List fee is ${feeScheduleDetails?.listing_fee}`}</li>
+                        <li>{`Bid fee is ${feeScheduleDetails?.bidding_fee}`}</li>
+                        <li>{`Commission on ${DEFAULT_PRICE} is ${feeScheduleDetails?.commission}`}</li>
+                    </ol>
+                </Col>
+            </Row>}
             <Row align="middle">
                 <Col flex={"auto"}>
                     <Button
@@ -106,6 +167,9 @@ function Marketplace(this: any) {
                     <FixedPriceListingManagement/>
                     <AuctionListingManagement/>
                     <ExtractTokenV1/>
+                    <Listings/>
+                    <TokenOffers/>
+                    <CollectionOffers/>
                 </Col>
             </Row>
         </>
@@ -1034,6 +1098,150 @@ function ExtractTokenV1(this: any) {
                     >
                         Extract token v1
                     </Button>
+                </Col>
+            </Row>
+        </>
+    );
+}
+
+function Listings(this: any) {
+    const [listings, setListings] = useState<any>("");
+
+    const loadListings = async () => {
+        let listings = await MARKETPLACE_HELPER.getListings(MODULE_ADDRESS, "example_v2_marketplace", false);
+        setListings(listings);
+    }
+
+    return (
+        <>
+            <Row align="middle">
+                <h3>Listings</h3>
+            </Row>
+            <Row align="middle">
+                <Col span={2} offset={4}>
+                    <Button
+                        onClick={() => loadListings()}
+                        type="primary"
+                        style={{height: "40px", backgroundColor: "#3f67ff"}}
+                    >
+                        Load Listings
+                    </Button>
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col>
+                    <p>Listings: {JSON.stringify(listings)}</p>
+                </Col>
+            </Row>
+        </>
+    );
+}
+
+
+function TokenOffers(this: any) {
+    const [tokenOffers, setTokenOffers] = useState<any>("");
+    const [tokenAddress, setTokenAddress] = useState<string>("");
+
+    const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
+        const val = event.target.value;
+        setter(val);
+    }
+
+    const loadTokenOffers = async () => {
+        let tokenOffers = await MARKETPLACE_HELPER.getTokenOffers(MODULE_ADDRESS, "example_v2_marketplace", tokenAddress, false);
+        setTokenOffers(tokenOffers);
+    }
+
+    return (
+        <>
+            <Row align="middle">
+                <h3>Token Offers</h3>
+            </Row>
+            <Row align="middle">
+                <Col span={4}>
+                    <p>Token Address: </p>
+                </Col>
+                <Col flex={"auto"}>
+                    <Input
+                        onChange={(event) => {
+                            onStringChange(event, setTokenAddress)
+                        }}
+                        style={{width: "calc(100% - 60px)"}}
+                        placeholder="TokenAddress"
+                        size="large"
+                        defaultValue={""}
+                    />
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={2} offset={4}>
+                    <Button
+                        onClick={() => loadTokenOffers()}
+                        type="primary"
+                        style={{height: "40px", backgroundColor: "#3f67ff"}}
+                    >
+                        Load Token offers
+                    </Button>
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col>
+                    <p>Token Offers: {JSON.stringify(tokenOffers)}</p>
+                </Col>
+            </Row>
+        </>
+    );
+}
+
+function CollectionOffers(this: any) {
+    const [collectionOffers, setCollectionOffers] = useState<any>("");
+    const [collectionAddress, setCollectionAddress] = useState<string>("");
+
+    const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
+        const val = event.target.value;
+        setter(val);
+    }
+
+    const loadCollectionOffers = async () => {
+        let collectionOffers = await MARKETPLACE_HELPER.getCollectionOffers(MODULE_ADDRESS, "example_v2_marketplace", collectionAddress, false);
+        setCollectionOffers(collectionOffers);
+    }
+
+    return (
+        <>
+            <Row align="middle">
+                <h3>Collection Offers</h3>
+            </Row>
+            <Row align="middle">
+                <Col span={4}>
+                    <p>Collection Address: </p>
+                </Col>
+                <Col flex={"auto"}>
+                    <Input
+                        onChange={(event) => {
+                            onStringChange(event, setCollectionAddress)
+                        }}
+                        style={{width: "calc(100% - 60px)"}}
+                        placeholder="CollectionAddress"
+                        size="large"
+                        defaultValue={""}
+                    />
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={2} offset={4}>
+                    <Button
+                        onClick={() => loadCollectionOffers()}
+                        type="primary"
+                        style={{height: "40px", backgroundColor: "#3f67ff"}}
+                    >
+                        Load Collection Offers
+                    </Button>
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col>
+                    <p>Collection Offers: {JSON.stringify(collectionOffers)}</p>
                 </Col>
             </Row>
         </>
