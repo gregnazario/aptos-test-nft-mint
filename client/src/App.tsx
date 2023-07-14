@@ -20,6 +20,7 @@ function App(this: any) {
         tokens: {
             standard: string,
             collection: string,
+            collection_id: string,
             name: string,
             data_id: string,
             uri: string,
@@ -77,6 +78,7 @@ function App(this: any) {
                 if (token_data.token_standard === "v2") {
                     let creator_address = token_data.current_token_data?.current_collection?.creator_address || "";
                     let collection_name = token_data.current_token_data?.current_collection?.collection_name || "";
+                    let collection_id = token_data.current_token_data?.current_collection?.collection_id || "";
                     let name = token_data.current_token_data?.token_name || "";
                     let data_id = token_data.current_token_data?.token_data_id || "";
                     let uri = token_data.current_token_data?.token_uri || "";
@@ -92,6 +94,7 @@ function App(this: any) {
                     return {
                         standard: "V2",
                         collection: collection_name,
+                        collection_id,
                         name: name,
                         data_id: data_id,
                         uri: uri,
@@ -103,6 +106,7 @@ function App(this: any) {
                     // Handle V1
                     let collection_creator = token_data.current_token_data?.current_collection?.creator_address || "";
                     let collection_name = token_data.current_token_data?.current_collection?.collection_name || "";
+                    let collection_id = token_data.current_token_data?.current_collection?.collection_id || "";
                     let name = token_data.current_token_data?.token_name || "";
                     let data_id = token_data.current_token_data?.token_data_id || "";
                     let uri = token_data.current_token_data?.token_uri || "";
@@ -111,6 +115,7 @@ function App(this: any) {
                     return {
                         standard: "V1",
                         collection: collection_name,
+                        collection_id,
                         name: name,
                         data_id: data_id,
                         uri: uri,
@@ -186,6 +191,7 @@ function App(this: any) {
                                 {wallet?.tokens.map(({
                                                          standard,
                                                          collection,
+                                                         collection_id,
                                                          name,
                                                          data_id,
                                                          uri,
@@ -197,6 +203,7 @@ function App(this: any) {
                                         <Tooltip placement="right" title={`${standard} ${type}\n
                                         Creator: ${creator_address}\n
                                         Collection: ${collection}\n
+                                        Collection id: ${collection_id}\n
                                         Property version: ${property_version}
                                         `}>
                                             <Image

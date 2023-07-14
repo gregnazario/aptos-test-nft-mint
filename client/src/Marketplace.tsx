@@ -84,9 +84,7 @@ function Marketplace(this: any) {
 
     const runTransaction = async (type: string, payload: any) => {
         try {
-            console.log("PAYLOAD")
             const response = await signAndSubmitTransaction(payload);
-            console.log(`${type}: ${response.hash}`);
             await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
             let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
             return txn;
@@ -193,7 +191,7 @@ function Marketplace(this: any) {
                         <Alert type="error" message="Not implemented"/>}
                     {tokenStandard === V2 && type === FIXED_PRICE && <V2FixedListing/>}
                     {tokenStandard === V2 && type === AUCTION && <V2AuctionListing/>}
-                    {tokenStandard === V2 && type === TOKEN_OFFERS && <Alert type="error" message="Not implemented"/>}
+                    {tokenStandard === V2 && type === TOKEN_OFFERS && <V2TokenOffers/>}
                     {tokenStandard === V2 && type === COLLECTION_OFFERS && <V2CollectionOffers/>}
                     <Row align="middle">
                         <Col>
@@ -1141,10 +1139,19 @@ function ExtractTokenV1(this: any) {
 }
 
 function Listings(this: any) {
-    const [listings, setListings] = useState<any>("");
+    const [listings, setListings] = useState<{
+        current_token_data: {},
+        price: number,
+        listing_id: string,
+        is_deleted: boolean,
+        token_amount: number,
+        seller: string,
+        marketplace: string,
+        contract_address: string
+    }[]>();
 
     const loadListings = async () => {
-        let listings = await MARKETPLACE_HELPER.getListings(MODULE_ADDRESS, "example_v2_marketplace", false);
+        let listings = (await MARKETPLACE_HELPER.getListings(MODULE_ADDRESS, "example_v2_marketplace", false));
         setListings(listings);
     }
 
@@ -1165,8 +1172,19 @@ function Listings(this: any) {
                 </Col>
             </Row>
             <Row align="middle">
-                <Col>
-                    <p>Listings: {JSON.stringify(listings)}</p>
+                <Col span={8}>
+                    <ol>
+                        {listings?.map(({
+                                            current_token_data,
+                                            price,
+                                            listing_id,
+                                            seller,
+                                        }) =>
+                            <li>
+                                Listing {listing_id} : Price {price / 100000000} APT :
+                                Seller {seller} data: {JSON.stringify(current_token_data)}
+                            </li>)}
+                    </ol>
                 </Col>
             </Row>
         </>
@@ -1191,12 +1209,12 @@ function V2TokenOffers(this: any) {
         setter(BigInt(val));
     }
 
-    const createCollectionOffer = async () => {
+    const createTokenOffer = async () => {
         // Ensure you're logged in
         if (!account || !tokenAddress) return [];
         const type = "Purchase listing";
         const expiration_time = BigInt(Math.floor(new Date().getTime() / 1000)) + expirationSecs;
-        const payload = await MARKETPLACE_HELPER.initTokenOfferForTokenV2(tokenAddress, feeSchedule, price, amount, expiration_time);
+        const payload = await MARKETPLACE_HELPER.initTokenOfferForTokenv2(tokenAddress, feeSchedule, price, amount, expiration_time);
         await runTransaction(type, payload);
     }
 
@@ -1301,7 +1319,7 @@ function V2TokenOffers(this: any) {
             <Row align="middle">
                 <Col span={2} offset={4}>
                     <Button
-                        onClick={() => createCollectionOffer()}
+                        onClick={() => createTokenOffer()}
                         type="primary"
                         style={{height: "40px", backgroundColor: "#3f67ff"}}
                     >
@@ -1312,6 +1330,7 @@ function V2TokenOffers(this: any) {
         </>
     );
 }
+
 function V2CollectionOffers(this: any) {
     const [collectionAddress, setCollectionAddress] = useState<string>("");
     const [feeSchedule, setFeeSchedule] = useState<string>(DEFAULT_FEE_SCHEDULE);
@@ -1354,7 +1373,7 @@ function V2CollectionOffers(this: any) {
     return (
         <>
             <Row align="middle">
-                <h3>Token Offers</h3>
+                <h3>Collection Offers</h3>
             </Row>
             <Row align="middle">
                 <Col span={4}>

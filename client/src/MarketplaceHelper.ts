@@ -425,9 +425,17 @@ export class Marketplace {
         return BigInt(outputs[0].toString());
     }
 
-    async getListings(contractAddress: MaybeHexString, marketplace: String, isDeleted: boolean): Promise<any> {
+    async getListings(contractAddress: MaybeHexString, marketplace: String, isDeleted: boolean): Promise<{
+        current_token_data: {},
+        price: number,
+        listing_id: string,
+        is_deleted: boolean,
+        token_amount: number,
+        seller: string,
+        marketplace: string,
+        contract_address: string
+    }[]> {
         // FIXME: Support pagination
-        // FIXME type the output
         // FIXME add fee schedule
         const query =
             `query GetListings($contract_address:String!, $marketplace: String!, $is_deleted: Boolean!) {
@@ -455,8 +463,19 @@ export class Marketplace {
             marketplace: marketplace,
             is_deleted: isDeleted,
         };
-
-        return await this.query_indexer(query, variables);
+        let result = await this.queryIndexer<{
+            nft_marketplace_v2_current_nft_marketplace_listings: {
+                current_token_data: {},
+                price: number,
+                listing_id: string,
+                is_deleted: boolean,
+                token_amount: number,
+                seller: string,
+                marketplace: string,
+                contract_address: string
+            }[]
+        }>(query, variables);
+        return result.nft_marketplace_v2_current_nft_marketplace_listings;
     }
 
     async getTokenAuctions(contractAddress: MaybeHexString, marketplace: String, tokenAddress: MaybeHexString, isDeleted: boolean): Promise<any> {
@@ -491,7 +510,7 @@ export class Marketplace {
             is_deleted: isDeleted,
         };
 
-        return await this.query_indexer(query, variables);
+        return await this.queryIndexer(query, variables);
     }
 
     async getTokenOffers(contractAddress: MaybeHexString, marketplace: String, tokenAddress: MaybeHexString, isDeleted: boolean): Promise<any> {
@@ -524,7 +543,7 @@ export class Marketplace {
             is_deleted: isDeleted,
         };
 
-        return await this.query_indexer(query, variables);
+        return await this.queryIndexer(query, variables);
     }
 
     async getCollectionOffers(contractAddress: MaybeHexString, marketplace: String, collectionAddress: MaybeHexString, isDeleted: boolean): Promise<any> {
@@ -555,12 +574,12 @@ export class Marketplace {
             is_deleted: isDeleted,
         };
 
-        return await this.query_indexer(query, variables);
+        return await this.queryIndexer(query, variables);
     }
 
     // Helpers
 
-    async query_indexer(query: string, variables?: {}) {
+    async queryIndexer<T>(query: string, variables?: {}): Promise<T> {
         const graphqlQuery = {
             query,
             variables: variables

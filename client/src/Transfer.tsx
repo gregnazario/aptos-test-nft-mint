@@ -29,7 +29,6 @@ function Transfer(this: any) {
     const runTransaction = async (type: string, payload: any) => {
         try {
             const response = await signAndSubmitTransaction(payload);
-            console.log(`${type}: ${response.hash}`);
             await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
             let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
             return txn;

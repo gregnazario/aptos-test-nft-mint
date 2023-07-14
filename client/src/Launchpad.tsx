@@ -149,7 +149,6 @@ function Launchpad(this: any) {
         };
         let txn = await runTransaction(type, payload);
         if (txn !== undefined) {
-            console.log(`TXN: ${JSON.stringify(txn.events[0].data.token)}`);
             await addToTransactions(type, txn.hash, `TokenAddress: ${txn.events[0].data.token}`);
         }
     }
@@ -175,7 +174,6 @@ function Launchpad(this: any) {
         };
         let txn = await runTransaction(type, payload);
         if (txn !== undefined) {
-            console.log(`TXN: ${JSON.stringify(txn.events[0].data.token)}`);
             await addToTransactions(type, txn.hash, `TokenAddress: ${txn.events[0].data.token}`);
         }
     }
@@ -183,7 +181,6 @@ function Launchpad(this: any) {
     const runTransaction = async (type: string, payload: any) => {
         try {
             const response = await signAndSubmitTransaction(payload);
-            console.log(`${type}: ${response.hash}`);
             await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
             let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
             return txn;
