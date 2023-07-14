@@ -7,8 +7,8 @@ import {useEffect, useState} from "react";
 import Launchpad from './Launchpad';
 import Marketplace from './Marketplace';
 import Transfer from './Transfer';
-import {DEVNET_PROVIDER} from "./Marketplace";
-// TODO: Load network from wallet
+import {DEVNET_PROVIDER} from "./Helper";
+
 export const FAUCET = new FaucetClient("https://fullnode.devnet.aptoslabs.com", "https://faucet.devnet.aptoslabs.com");
 
 function App(this: any) {
@@ -29,32 +29,31 @@ function App(this: any) {
             creator_address: string
         }[]
     }>();
-    const {account, network, connected} = useWallet();
+    const walletContextState = useWallet();
 
     useEffect(() => {
         // Load the current chain id
         loadChainId();
         // On load, pull the account's wallet and check that it exists (fund it if it doesn't)
-        if (!account) return;
+        if (!walletContextState.account) return;
 
         ensure_account_exists();
         loadWalletNfts();
 
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [account, network])
+    }, [walletContextState])
 
     const loadChainId = async () => {
         setChainId(await DEVNET_PROVIDER.getChainId());
     }
 
     const ensure_account_exists = async () => {
-        if (!account) return;
-        let address = account?.address as string;
+        if (!walletContextState.account) return;
+        let address = walletContextState.account?.address as string;
         try {
             await DEVNET_PROVIDER.aptosClient.getAccount(address);
             setWalletLoadError("")
         } catch (e) {
-            // TODO: check if it's account doesn't exist
             // Fund the account
             try {
                 await FAUCET.fundAccount(address, 100000000);
@@ -67,12 +66,12 @@ function App(this: any) {
 
     const loadWalletNfts = async () => {
         // Ensure you're logged in
-        if (!account) {
+        if (!walletContextState.account) {
             return {name: "Wallet not connected", nfts: []};
         }
 
         try {
-            let tokens_query = await DEVNET_PROVIDER.indexerClient.getOwnedTokens(account.address);
+            let tokens_query = await DEVNET_PROVIDER.indexerClient.getOwnedTokens(walletContextState.account.address);
 
             let tokens = tokens_query.current_token_ownerships_v2.map(token_data => {
                 if (token_data.token_standard === "v2") {
@@ -126,7 +125,7 @@ function App(this: any) {
                 }
             })
 
-            setWallet({name: account.address, tokens: tokens})
+            setWallet({name: walletContextState.account.address, tokens: tokens})
             return
         } catch (error: any) {
             console.log("Failed to load wallet" + error)
@@ -136,8 +135,7 @@ function App(this: any) {
     }
 
     const isDevnet = (): boolean => {
-        // TODO: Load devnet chain id on page load and compare that against the wallet
-        return Number(network?.chainId) === chainId || network?.name?.toLowerCase() === 'devnet';
+        return Number(walletContextState.network?.chainId) === chainId || walletContextState.network?.name?.toLowerCase() === 'devnet';
     }
 
     return (
@@ -145,7 +143,7 @@ function App(this: any) {
             <Layout>
                 <Row align="middle">
                     <Col span={10} offset={2}>
-                        <h1>NFT Test Marketplace ({network?.name})</h1>
+                        <h1>NFT Test Marketplace ({walletContextState.network?.name})</h1>
                     </Col>
                     <Col span={12} style={{textAlign: "right", paddingRight: "200px"}}>
                         <WalletSelector/>
@@ -153,20 +151,20 @@ function App(this: any) {
                 </Row>
             </Layout>
             {
-                !connected &&
+                !walletContextState.connected &&
                 <Alert message={`Please connect your wallet`} type="info"/>
             }
             {
-                connected && !isDevnet() &&
-                <Alert message={`Wallet is connected to ${network?.name}.  Please connect to devnet`}
+                walletContextState.connected && !isDevnet() &&
+                <Alert message={`Wallet is connected to ${walletContextState.network?.name}.  Please connect to devnet`}
                        type="warning"/>
             }
-            { // TODO: Add back spinner
-                connected && isDevnet() &&
+            {
+                walletContextState.connected && isDevnet() &&
                 <Layout>
                     {walletLoadError && <Row align="middle">
                         <Alert
-                            message={`Wallet failed to load for ${account?.address}.  Please try connecting again or funding the account ${walletLoadError}`}
+                            message={`Wallet failed to load for ${walletContextState.account?.address}.  Please try connecting again or funding the account ${walletLoadError}`}
                             type="warning"/>
                     </Row>}
                     <Row align="middle">
@@ -219,17 +217,20 @@ function App(this: any) {
                     </Row>
                     <Row align="middle">
                         <Col offset={2}>
-                            <Launchpad></Launchpad>
+                            <Launchpad account={walletContextState.account}
+                                       submitTransaction={walletContextState.signAndSubmitTransaction}/>
                         </Col>
                     </Row>
                     <Row align="middle">
                         <Col offset={2}>
-                            <Marketplace></Marketplace>
+                            <Marketplace account={walletContextState.account}
+                                         submitTransaction={walletContextState.signAndSubmitTransaction}/>
                         </Col>
                     </Row>
                     <Row align="middle">
                         <Col offset={2}>
-                            <Transfer/>
+                            <Transfer account={walletContextState.account}
+                                      submitTransaction={walletContextState.signAndSubmitTransaction}/>
                         </Col>
                     </Row>
                 </Layout>

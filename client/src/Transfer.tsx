@@ -1,42 +1,22 @@
 import {Button, Col, Input, Row} from "antd";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
-import {useWallet} from "@aptos-labs/wallet-adapter-react";
 import {useState} from "react";
-import {DEVNET_PROVIDER} from "./Marketplace";
+import {onStringChange, runTransaction, TransactionContext} from "./Helper";
 
-function Transfer(this: any) {
+function Transfer(props: TransactionContext) {
     const [objectAddress, setObjectAddress] = useState<string>("");
     const [destinationAddress, setDestinationAddress] = useState<string>("");
-    const {account, signAndSubmitTransaction} = useWallet();
-    const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
-        const val = event.target.value;
-        setter(val);
-    }
 
     const transferObject = async () => {
         // Ensure you're logged in
-        if (!account || !objectAddress) return [];
-        const type = "Transfer Object";
+        if (!props.account || !objectAddress) return [];
         const payload = {
             type: "entry_function_payload",
             function: `0x1::object::transfer`,
             type_arguments: ["0x1::object::ObjectCore"],
             arguments: [objectAddress, destinationAddress],
         };
-        await runTransaction(type, payload);
-    }
-
-    const runTransaction = async (type: string, payload: any) => {
-        try {
-            const response = await signAndSubmitTransaction(payload);
-            await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
-            let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
-            return txn;
-        } catch (error: any) {
-            console.log("Failed to wait for txn" + error)
-        }
-
-        return undefined;
+        await runTransaction(props.submitTransaction, payload);
     }
 
     return (

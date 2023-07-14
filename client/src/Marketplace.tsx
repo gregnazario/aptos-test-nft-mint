@@ -1,14 +1,17 @@
 import {Alert, Button, Col, Image, Input, Row, Select, Tooltip} from "antd";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
-import {useWallet} from "@aptos-labs/wallet-adapter-react";
 import {useEffect, useState} from "react";
 import {Marketplace as Helper} from "./MarketplaceHelper"
-import {HexString, Provider} from "aptos";
+import {HexString} from "aptos";
+import {
+    onStringChange,
+    onNumberChange,
+    onBigIntChange,
+    runTransaction,
+    DEVNET_PROVIDER,
+     TransactionContext
+} from "./Helper";
 
-export const DEVNET_PROVIDER = new Provider({
-    fullnodeUrl: "https://fullnode.devnet.aptoslabs.com",
-    indexerUrl: "https://ideal-cricket-94.hasura.app/v1/graphql"
-})
 export const MODULE_ADDRESS = "0xeb36546237930294a8a9fec1e5d42d9633e9e9355eec3fa80f2610a29d95e152";
 export const DEFAULT_FEE_SCHEDULE = "0x96e6143a72d9cb40872972c241112ecb43cc0ca8aca376a940a182d620ccef1c";
 export const MARKETPLACE_HELPER = new Helper(DEVNET_PROVIDER, MODULE_ADDRESS);
@@ -25,8 +28,7 @@ const AUCTION = "Auction";
 const TOKEN_OFFERS = "Token Offers";
 const COLLECTION_OFFERS = "Collection Offers";
 
-// TODO: make this more accessible / be deployed by others?
-function Marketplace(this: any) {
+function Marketplace(props: TransactionContext) {
     const [tokenStandard, setTokenStandard] = useState<string>(V2);
     const [type, setType] = useState<string>(FIXED_PRICE);
     const [feeSchedule, setFeeSchedule] = useState<string>(DEFAULT_FEE_SCHEDULE);
@@ -36,17 +38,15 @@ function Marketplace(this: any) {
         bidding_fee: string,
         commission: string,
     }>();
-    // TODO: pass in wallet from outside component
-    const {account, signAndSubmitTransaction} = useWallet();
 
     useEffect(() => {
         loadFeeSchedule()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [account])
+    }, [props.account])
 
     const loadFeeSchedule = async () => {
         // Ensure you're logged in
-        if (!account) return [];
+        if (!props.account) return [];
 
         let fee_address = await MARKETPLACE_HELPER.feeAddress(feeSchedule);
         let listing_fee = await MARKETPLACE_HELPER.listingFee(feeSchedule);
@@ -61,19 +61,13 @@ function Marketplace(this: any) {
         })
     }
 
-    const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
-        const val = event.target.value;
-        setter(val);
-    }
-
     const createFeeSchedule = async () => {
         // Ensure you're logged in
-        if (!account) return [];
+        if (!props.account) return [];
 
-        const type = "Create Fee schedule";
-        const payload = await MARKETPLACE_HELPER.initFeeSchedule(account.address, BigInt(50), BigInt(125), BigInt(100), BigInt(2));
+        const payload = await MARKETPLACE_HELPER.initFeeSchedule(props.account.address, BigInt(50), BigInt(125), BigInt(100), BigInt(2));
 
-        let txn = await runTransaction(type, payload);
+        let txn = await runTransaction(props.submitTransaction, payload);
         if (txn !== undefined) {
             let address = "unknown";
             for (let change of txn.changes) {
@@ -89,19 +83,6 @@ function Marketplace(this: any) {
 
     const toApt = (num: string): number => {
         return Number(num) / APT
-    }
-
-    const runTransaction = async (type: string, payload: any) => {
-        try {
-            const response = await signAndSubmitTransaction(payload);
-            await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
-            let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
-            return txn;
-        } catch (error: any) {
-            console.log("Failed to wait for txn" + error)
-        }
-
-        return undefined;
     }
 
     return (
@@ -193,33 +174,33 @@ function Marketplace(this: any) {
                             <h2>Listing NFTs</h2>
                         </Col>
                     </Row>
-                    {tokenStandard === V1 && type === FIXED_PRICE && <V1FixedListing/>}
-                    {tokenStandard === V1 && type === AUCTION && <V1AuctionListing/>}
+                    {tokenStandard === V1 && type === FIXED_PRICE && <V1FixedListing account={props.account} submitTransaction={props.submitTransaction}/>}
+                    {tokenStandard === V1 && type === AUCTION && <V1AuctionListing account={props.account} submitTransaction={props.submitTransaction}/>}
                     {tokenStandard === V1 && type === TOKEN_OFFERS && <Alert type="error" message="Not implemented"/>}
                     {tokenStandard === V1 && type === COLLECTION_OFFERS &&
                         <Alert type="error" message="Not implemented"/>}
-                    {tokenStandard === V2 && type === FIXED_PRICE && <V2FixedListing/>}
-                    {tokenStandard === V2 && type === AUCTION && <V2AuctionListing/>}
-                    {tokenStandard === V2 && type === TOKEN_OFFERS && <V2TokenOffers/>}
-                    {tokenStandard === V2 && type === COLLECTION_OFFERS && <V2CollectionOffers/>}
+                    {tokenStandard === V2 && type === FIXED_PRICE && <V2FixedListing account={props.account} submitTransaction={props.submitTransaction}/>}
+                    {tokenStandard === V2 && type === AUCTION && <V2AuctionListing account={props.account} submitTransaction={props.submitTransaction}/>}
+                    {tokenStandard === V2 && type === TOKEN_OFFERS && <V2TokenOffers account={props.account} submitTransaction={props.submitTransaction}/>}
+                    {tokenStandard === V2 && type === COLLECTION_OFFERS && <V2CollectionOffers account={props.account} submitTransaction={props.submitTransaction}/>}
                     <Row align="middle">
                         <Col>
                             <h2>Interacting with Listings</h2>
                         </Col>
                     </Row>
-                    {type === FIXED_PRICE && <FixedPriceListingManagement/>}
-                    {type === AUCTION && <AuctionListingManagement/>}
-                    {tokenStandard === V1 && <ExtractTokenV1/>}
-                    {(type === FIXED_PRICE) && <Listings/>}
-                    {type === TOKEN_OFFERS && <TokenOffers/>}
-                    {type === COLLECTION_OFFERS && <CollectionOffers/>}
+                    {type === FIXED_PRICE && <FixedPriceListingManagement account={props.account} submitTransaction={props.submitTransaction}/>}
+                    {type === AUCTION && <AuctionListingManagement account={props.account} submitTransaction={props.submitTransaction}/>}
+                    {tokenStandard === V1 && <ExtractTokenV1 account={props.account} submitTransaction={props.submitTransaction}/>}
+                    {(type === FIXED_PRICE) && <Listings account={props.account} submitTransaction={props.submitTransaction}/>}
+                    {type === TOKEN_OFFERS && <TokenOffers account={props.account} submitTransaction={props.submitTransaction}/>}
+                    {type === COLLECTION_OFFERS && <CollectionOffers account={props.account} submitTransaction={props.submitTransaction} />}
                 </Col>
             </Row>
         </>
     );
 }
 
-function V1FixedListing(this: any) {
+function V1FixedListing(props: TransactionContext) {
     const [message, setMessage] = useState<String>("");
     const [collectionName, setCollectionName] = useState<string>(DEFAULT_COLLECTION);
     const [tokenName, setTokenName] = useState<string>(DEFAULT_TOKEN_NAME);
@@ -229,21 +210,10 @@ function V1FixedListing(this: any) {
 
     const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>(DEFAULT_FEE_SCHEDULE);
     const [listingPrice, setListingPrice] = useState<string>(DEFAULT_PRICE);
-    // TODO: pass in wallet from outside component
-    const {account, signAndSubmitTransaction} = useWallet();
-    const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
-        const val = event.target.value;
-        setter(val);
-    }
 
-    const onNumberChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: number) => number) | number)) => void) => {
-        const val = event.target.value;
-        setter(Number(val));
-    }
     const createV1Listing = async () => {
         // Ensure you're logged in
-        if (!account) return [];
-        const type = "Create fixed price V1 listing";
+        if (!props.account) return [];
         const payload =
             await MARKETPLACE_HELPER.initFixedPriceListingForTokenv1(
                 creatorAddress,
@@ -255,7 +225,7 @@ function V1FixedListing(this: any) {
                 BigInt(listingPrice)
             );
 
-        let txn = await runTransaction(type, payload);
+        let txn = await runTransaction(props.submitTransaction, payload);
         if (txn !== undefined) {
             let address = "unknown";
             for (let event of txn.events) {
@@ -268,19 +238,6 @@ function V1FixedListing(this: any) {
         } else {
             setMessage("")
         }
-    }
-
-    const runTransaction = async (type: string, payload: any) => {
-        try {
-            const response = await signAndSubmitTransaction(payload);
-            await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
-            let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
-            return txn;
-        } catch (error: any) {
-            console.log("Failed to wait for txn" + error)
-        }
-
-        return undefined;
     }
 
     return (
@@ -301,7 +258,7 @@ function V1FixedListing(this: any) {
                         }}
                         placeholder="Creator Address"
                         size="large"
-                        defaultValue={account?.address}
+                        defaultValue={props.account?.address}
                     />
                 </Col>
             </Row>
@@ -403,7 +360,7 @@ function V1FixedListing(this: any) {
     );
 }
 
-function V1AuctionListing(this: any) {
+function V1AuctionListing(props: TransactionContext) {
     const [message, setMessage] = useState<String>("");
     const [collectionName, setCollectionName] = useState<string>(DEFAULT_COLLECTION);
     const [tokenName, setTokenName] = useState<string>(DEFAULT_TOKEN_NAME);
@@ -414,21 +371,10 @@ function V1AuctionListing(this: any) {
 
     const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>(DEFAULT_FEE_SCHEDULE);
     const [listingPrice, setListingPrice] = useState<string>(DEFAULT_PRICE);
-    // TODO: pass in wallet from outside component
-    const {account, signAndSubmitTransaction} = useWallet();
-    const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
-        const val = event.target.value;
-        setter(val);
-    }
 
-    const onNumberChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: number) => number) | number)) => void) => {
-        const val = event.target.value;
-        setter(Number(val));
-    }
     const createV1AuctionListing = async () => {
         // Ensure you're logged in
-        if (!account) return [];
-        const type = "Create auction V1 listing";
+        if (!props.account) return [];
 
         const now = Math.floor(new Date().getTime() / 1000);
 
@@ -446,7 +392,7 @@ function V1AuctionListing(this: any) {
             // TODO: Buy now
         );
 
-        let txn = await runTransaction(type, payload);
+        let txn = await runTransaction(props.submitTransaction, payload);
         if (txn !== undefined) {
             let address = "unknown";
             for (let event of txn.events) {
@@ -459,19 +405,6 @@ function V1AuctionListing(this: any) {
         } else {
             setMessage("")
         }
-    }
-
-    const runTransaction = async (type: string, payload: any) => {
-        try {
-            const response = await signAndSubmitTransaction(payload);
-            await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
-            let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
-            return txn;
-        } catch (error: any) {
-            console.log("Failed to wait for txn" + error)
-        }
-
-        return undefined;
     }
 
     return (
@@ -492,7 +425,7 @@ function V1AuctionListing(this: any) {
                         }}
                         placeholder="Creator Address"
                         size="large"
-                        defaultValue={account?.address}
+                        defaultValue={props.account?.address}
                     />
                 </Col>
             </Row>
@@ -610,23 +543,16 @@ function V1AuctionListing(this: any) {
 }
 
 
-function V2FixedListing(this: any) {
+function V2FixedListing(props: TransactionContext) {
     const [message, setMessage] = useState<String>("");
     const [tokenAddress, setTokenAddress] = useState<string>("");
 
     const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>(DEFAULT_FEE_SCHEDULE);
     const [listingPrice, setListingPrice] = useState<string>(DEFAULT_PRICE);
-    // TODO: pass in wallet from outside component
-    const {account, signAndSubmitTransaction} = useWallet();
-    const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
-        const val = event.target.value;
-        setter(val);
-    }
 
     const createV2Listing = async () => {
         // Ensure you're logged in
-        if (!account || !tokenAddress) return [];
-        const type = "Create fixed price V2 listing";
+        if (!props.account || !tokenAddress) return [];
         const payload = await MARKETPLACE_HELPER.initFixedPriceListing(
             tokenAddress,
             feeScheduleAddress,
@@ -634,7 +560,7 @@ function V2FixedListing(this: any) {
             BigInt(listingPrice)
         );
 
-        let txn = await runTransaction(type, payload);
+        let txn = await runTransaction(props.submitTransaction, payload);
         if (txn !== undefined) {
             let address = "unknown";
             for (let event of txn.events) {
@@ -647,19 +573,6 @@ function V2FixedListing(this: any) {
         } else {
             setMessage("")
         }
-    }
-
-    const runTransaction = async (type: string, payload: any) => {
-        try {
-            const response = await signAndSubmitTransaction(payload);
-            await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
-            let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
-            return txn;
-        } catch (error: any) {
-            console.log("Failed to wait for txn" + error)
-        }
-
-        return undefined;
     }
 
     return (
@@ -737,28 +650,17 @@ function V2FixedListing(this: any) {
     );
 }
 
-function V2AuctionListing(this: any) {
+function V2AuctionListing(props: TransactionContext) {
     const [message, setMessage] = useState<String>("");
     const [tokenAddress, setTokenAddress] = useState<string>("");
     const [auctionDuration, setAuctionDuration] = useState<number>(3600);
 
     const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>(DEFAULT_FEE_SCHEDULE);
     const [listingPrice, setListingPrice] = useState<string>(DEFAULT_PRICE);
-    // TODO: pass in wallet from outside component
-    const {account, signAndSubmitTransaction} = useWallet();
-    const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
-        const val = event.target.value;
-        setter(val);
-    }
 
-    const onNumberChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: number) => number) | number)) => void) => {
-        const val = event.target.value;
-        setter(Number(val));
-    }
     const createV2AuctionListing = async () => {
         // Ensure you're logged in
-        if (!account || !tokenAddress) return [];
-        const type = "Create auction V2 listing";
+        if (!props.account || !tokenAddress) return [];
 
         const now = Math.floor(new Date().getTime() / 1000);
 
@@ -772,7 +674,7 @@ function V2AuctionListing(this: any) {
             BigInt(auctionDuration)
         );
 
-        let txn = await runTransaction(type, payload);
+        let txn = await runTransaction(props.submitTransaction, payload);
         if (txn !== undefined) {
             let address = "unknown";
             for (let event of txn.events) {
@@ -785,19 +687,6 @@ function V2AuctionListing(this: any) {
         } else {
             setMessage("")
         }
-    }
-
-    const runTransaction = async (type: string, payload: any) => {
-        try {
-            const response = await signAndSubmitTransaction(payload);
-            await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
-            let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
-            return txn;
-        } catch (error: any) {
-            console.log("Failed to wait for txn" + error)
-        }
-
-        return undefined;
     }
 
     return (
@@ -890,43 +779,21 @@ function V2AuctionListing(this: any) {
     );
 }
 
-function FixedPriceListingManagement(this: any) {
+function FixedPriceListingManagement(props: TransactionContext) {
     const [listingAddress, setListingAddress] = useState<string>("");
-
-    // TODO: pass in wallet from outside component
-    const {account, signAndSubmitTransaction} = useWallet();
-    const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
-        const val = event.target.value;
-        setter(val);
-    }
 
     const cancelListing = async () => {
         // Ensure you're logged in
-        if (!account || !listingAddress) return [];
-        const type = "Cancel fixed price listing";
+        if (!props.account || !listingAddress) return [];
         const payload = await MARKETPLACE_HELPER.endFixedPriceListing(listingAddress);
-        await runTransaction(type, payload);
+        await runTransaction(props.submitTransaction, payload);
     }
 
     const purchaseListing = async () => {
         // Ensure you're logged in
-        if (!account || !listingAddress) return [];
-        const type = "Purchase listing";
+        if (!props.account || !listingAddress) return [];
         const payload = await MARKETPLACE_HELPER.purchaseListing(listingAddress);
-        await runTransaction(type, payload);
-    }
-
-    const runTransaction = async (type: string, payload: any) => {
-        try {
-            const response = await signAndSubmitTransaction(payload);
-            await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
-            let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
-            return txn;
-        } catch (error: any) {
-            console.log("Failed to wait for txn" + error)
-        }
-
-        return undefined;
+        await runTransaction(props.submitTransaction, payload);
     }
 
     return (
@@ -974,49 +841,22 @@ function FixedPriceListingManagement(this: any) {
     );
 }
 
-function AuctionListingManagement(this: any) {
+function AuctionListingManagement(props: TransactionContext) {
     const [listingAddress, setListingAddress] = useState<string>("");
     const [bidAmount, setBidAmount] = useState<bigint>(BigInt(0));
 
-    // TODO: pass in wallet from outside component
-    const {account, signAndSubmitTransaction} = useWallet();
-    const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
-        const val = event.target.value;
-        setter(val);
-    }
-
-    const onBigIntChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: bigint) => bigint) | bigint)) => void) => {
-        const val = event.target.value;
-        setter(BigInt(val));
-    }
-
     const completeAuction = async () => {
         // Ensure you're logged in
-        if (!account || !listingAddress) return [];
-        const type = "Complete auction";
+        if (!props.account || !listingAddress) return [];
         const payload = await MARKETPLACE_HELPER.completeAuctionListing(listingAddress);
-        await runTransaction(type, payload);
+        await runTransaction(props.submitTransaction, payload);
     }
 
     const bidAuction = async () => {
         // Ensure you're logged in
-        if (!account || !listingAddress) return [];
-        const type = "Bid";
-        const payload = await MARKETPLACE_HELPER.bidAuctionListing(account.address, listingAddress, bidAmount);
-        await runTransaction(type, payload);
-    }
-
-    const runTransaction = async (type: string, payload: any) => {
-        try {
-            const response = await signAndSubmitTransaction(payload);
-            await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
-            let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
-            return txn;
-        } catch (error: any) {
-            console.log("Failed to wait for txn" + error)
-        }
-
-        return undefined;
+        if (!props.account || !listingAddress) return [];
+        const payload = await MARKETPLACE_HELPER.bidAuctionListing(props.account.address, listingAddress, bidAmount);
+        await runTransaction(props.submitTransaction, payload);
     }
 
     return (
@@ -1081,34 +921,15 @@ function AuctionListingManagement(this: any) {
 }
 
 
-function ExtractTokenV1(this: any) {
+function ExtractTokenV1(props: TransactionContext) {
     const [objectAddress, setObjectAddress] = useState<string>("");
 
-    // TODO: pass in wallet from outside component
-    const {account, signAndSubmitTransaction} = useWallet();
-    const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
-        const val = event.target.value;
-        setter(val);
-    }
 
     const extractToken = async () => {
         // Ensure you're logged in
-        if (!account || !objectAddress) return [];
-        const type = "Extract token";
+        if (!props.account || !objectAddress) return [];
         const payload = await MARKETPLACE_HELPER.extract_tokenv1(objectAddress);
-        await runTransaction(type, payload);
-    }
-    const runTransaction = async (type: string, payload: any) => {
-        try {
-            const response = await signAndSubmitTransaction(payload);
-            await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
-            let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
-            return txn;
-        } catch (error: any) {
-            console.log("Failed to wait for txn" + error)
-        }
-
-        return undefined;
+        await runTransaction(props.submitTransaction, payload);
     }
 
     return (
@@ -1147,7 +968,7 @@ function ExtractTokenV1(this: any) {
     );
 }
 
-function Listings(this: any) {
+function Listings(props: TransactionContext) {
     const [listings, setListings] = useState<{
         collection_id: string,
         token_data_id: string,
@@ -1161,17 +982,15 @@ function Listings(this: any) {
         marketplace: string,
         contract_address: string
     }[]>();
-    const {account, signAndSubmitTransaction} = useWallet();
 
     useEffect(() => {
         loadListings()
-    }, [account])
+    }, [props.account])
 
     const loadListings = async () => {
-        let listings = (await MARKETPLACE_HELPER.getListingsV2(MODULE_ADDRESS, "example_v2_marketplace", false));
+        let listings = (await MARKETPLACE_HELPER.getV2Listings(MODULE_ADDRESS, "example_v2_marketplace", false));
         let parsed = [];
         for (const listing of listings) {
-            // TODO: Probably need to fix to get latest URI
             parsed.push(
                 {
                     collection_id: listing.current_token_data.collection_id,
@@ -1194,31 +1013,16 @@ function Listings(this: any) {
 
     const cancelListing = async (listingAddress: string) => {
         // Ensure you're logged in
-        if (!account) return [];
-        const type = "Cancel fixed price listing";
+        if (!props.account) return [];
         const payload = await MARKETPLACE_HELPER.endFixedPriceListing(listingAddress);
-        await runTransaction(type, payload);
+        await runTransaction(props.submitTransaction, payload);
     }
 
     const purchaseListing = async (listingAddress: string) => {
         // Ensure you're logged in
-        if (!account) return [];
-        const type = "Purchase listing";
+        if (!props.account) return [];
         const payload = await MARKETPLACE_HELPER.purchaseListing(listingAddress);
-        await runTransaction(type, payload);
-    }
-
-    const runTransaction = async (type: string, payload: any) => {
-        try {
-            const response = await signAndSubmitTransaction(payload);
-            await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
-            let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
-            return txn;
-        } catch (error: any) {
-            console.log("Failed to wait for txn" + error)
-        }
-
-        return undefined;
+        await runTransaction(props.submitTransaction, payload);
     }
 
     return (
@@ -1270,7 +1074,7 @@ function Listings(this: any) {
                                         </Button>
                                     </Col>
                                     <Col>
-                                        {seller === account?.address && <Button
+                                        {seller === props.account?.address && <Button
                                             onClick={() => cancelListing(listing_id)}
                                             type="primary"
                                             style={{height: "40px", backgroundColor: "#3f67ff"}}
@@ -1288,42 +1092,18 @@ function Listings(this: any) {
 }
 
 
-function V2TokenOffers(this: any) {
+function V2TokenOffers(props: TransactionContext) {
     const [tokenAddress, setTokenAddress] = useState<string>("");
     const [feeSchedule, setFeeSchedule] = useState<string>(DEFAULT_FEE_SCHEDULE);
     const [price, setPrice] = useState<bigint>(BigInt(DEFAULT_PRICE));
     const [expirationSecs, setExpirationSecs] = useState<bigint>(BigInt(3600));
-    const {account, signAndSubmitTransaction} = useWallet();
-
-    const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
-        const val = event.target.value;
-        setter(val);
-    }
-    const onBigIntChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: bigint) => bigint) | bigint)) => void) => {
-        const val = event.target.value;
-        setter(BigInt(val));
-    }
 
     const createTokenOffer = async () => {
         // Ensure you're logged in
-        if (!account || !tokenAddress) return [];
-        const type = "Purchase listing";
+        if (!props.account || !tokenAddress) return [];
         const expiration_time = BigInt(Math.floor(new Date().getTime() / 1000)) + expirationSecs;
         const payload = await MARKETPLACE_HELPER.initTokenOfferForTokenv2(tokenAddress, feeSchedule, price, expiration_time);
-        await runTransaction(type, payload);
-    }
-
-    const runTransaction = async (type: string, payload: any) => {
-        try {
-            const response = await signAndSubmitTransaction(payload);
-            await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
-            let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
-            return txn;
-        } catch (error: any) {
-            console.log("Failed to wait for txn" + error)
-        }
-
-        return undefined;
+        await runTransaction(props.submitTransaction, payload);
     }
 
     return (
@@ -1410,43 +1190,19 @@ function V2TokenOffers(this: any) {
     );
 }
 
-function V2CollectionOffers(this: any) {
+function V2CollectionOffers(props: TransactionContext) {
     const [collectionAddress, setCollectionAddress] = useState<string>("");
     const [feeSchedule, setFeeSchedule] = useState<string>(DEFAULT_FEE_SCHEDULE);
     const [price, setPrice] = useState<bigint>(BigInt(DEFAULT_PRICE));
     const [amount, setAmount] = useState<bigint>(BigInt(1));
     const [expirationSecs, setExpirationSecs] = useState<bigint>(BigInt(3600));
-    const {account, signAndSubmitTransaction} = useWallet();
-
-    const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
-        const val = event.target.value;
-        setter(val);
-    }
-    const onBigIntChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: bigint) => bigint) | bigint)) => void) => {
-        const val = event.target.value;
-        setter(BigInt(val));
-    }
 
     const createCollectionOffer = async () => {
         // Ensure you're logged in
-        if (!account || !collectionAddress) return [];
-        const type = "Purchase listing";
+        if (!props.account || !collectionAddress) return [];
         const expiration_time = BigInt(Math.floor(new Date().getTime() / 1000)) + expirationSecs;
         const payload = await MARKETPLACE_HELPER.initCollectionOfferForTokenv2(collectionAddress, feeSchedule, price, amount, expiration_time);
-        await runTransaction(type, payload);
-    }
-
-    const runTransaction = async (type: string, payload: any) => {
-        try {
-            const response = await signAndSubmitTransaction(payload);
-            await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
-            let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
-            return txn;
-        } catch (error: any) {
-            console.log("Failed to wait for txn" + error)
-        }
-
-        return undefined;
+        await runTransaction(props.submitTransaction, payload);
     }
 
     return (
@@ -1549,14 +1305,9 @@ function V2CollectionOffers(this: any) {
     );
 }
 
-function TokenOffers(this: any) {
+function TokenOffers(props: TransactionContext) {
     const [tokenOffers, setTokenOffers] = useState<any>("");
     const [tokenAddress, setTokenAddress] = useState<string>("");
-
-    const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
-        const val = event.target.value;
-        setter(val);
-    }
 
     const loadTokenOffers = async () => {
         let tokenOffers = await MARKETPLACE_HELPER.getTokenOffers(MODULE_ADDRESS, "example_v2_marketplace", tokenAddress, false);
@@ -1604,7 +1355,7 @@ function TokenOffers(this: any) {
     );
 }
 
-function CollectionOffers(this: any) {
+function CollectionOffers(props: TransactionContext) {
     const [collectionOffers, setCollectionOffers] = useState<{
         buyer: string,
         collection_id: string,
@@ -1617,12 +1368,6 @@ function CollectionOffers(this: any) {
     }[]>();
     const [collectionAddress, setCollectionAddress] = useState<string>("");
     const [tokenAddress, setTokenAddress] = useState<string>("");
-    const {account, signAndSubmitTransaction} = useWallet();
-
-    const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
-        const val = event.target.value;
-        setter(val);
-    }
 
     const loadCollectionOffers = async () => {
         let collectionOffers = await MARKETPLACE_HELPER.getCollectionOffers(MODULE_ADDRESS, "example_v2_marketplace", collectionAddress, false);
@@ -1631,31 +1376,16 @@ function CollectionOffers(this: any) {
 
     const fillCollectionOffer = async (offerAddress: string) => {
         // Ensure you're logged in
-        if (!account || !offerAddress) return [];
-        const type = "Purchase listing";
+        if (!props.account || !offerAddress) return [];
         const payload = await MARKETPLACE_HELPER.fillCollectionOfferForTokenv2(offerAddress, tokenAddress);
-        await runTransaction(type, payload);
+        await runTransaction(props.submitTransaction, payload);
     }
 
     const cancelCollectionOffer = async (offerAddress: string) => {
         // Ensure you're logged in
-        if (!account || !offerAddress) return [];
-        const type = "Cancel listing";
+        if (!props.account || !offerAddress) return [];
         const payload = await MARKETPLACE_HELPER.cancelCollectionOffer(offerAddress);
-        await runTransaction(type, payload);
-    }
-
-    const runTransaction = async (type: string, payload: any) => {
-        try {
-            const response = await signAndSubmitTransaction(payload);
-            await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
-            let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
-            return txn;
-        } catch (error: any) {
-            console.log("Failed to wait for txn" + error)
-        }
-
-        return undefined;
+        await runTransaction(props.submitTransaction, payload);
     }
 
     return (
@@ -1739,7 +1469,7 @@ function CollectionOffers(this: any) {
                                         </Button>
                                     </Col>
                                     <Col>
-                                        {buyer === account?.address && <Button
+                                        {buyer === props.account?.address && <Button
                                             onClick={() => cancelCollectionOffer(collection_offer_id)}
                                             type="primary"
                                             style={{height: "40px", backgroundColor: "#3f67ff"}}

@@ -1,14 +1,11 @@
 import {Button, Col, Input, Row} from "antd";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
-import {useWallet} from "@aptos-labs/wallet-adapter-react";
 import {useState} from "react";
-import {DEVNET_PROVIDER} from "./Marketplace";
+import {onNumberChange, onStringChange, runTransaction, TransactionContext} from "./Helper";
 
-// TODO: make this more accessible / be deployed by others?
 const DEFAULT_IMAGE = "https://3zglr2262zd6f45qo6nqfycybj4acwnughgzual3oxdmu7wlz36a.arweave.net/3ky4617WR-LzsHebAuBYCngBWbQxzZoBe3XGyn7Lzvw/0.png"
 
-function Launchpad(this: any) {
-    // TODO Consolidate a lot of these
+function Launchpad(props: TransactionContext) {
     const [collectionName, setCollectionName] = useState<string>("Test Collection");
     const [tokenName, setTokenName] = useState<string>("Test Token #1");
 
@@ -16,28 +13,10 @@ function Launchpad(this: any) {
 
     const [description, setDescription] = useState<string>("");
     const [tokenUri, setTokenUri] = useState<string>(DEFAULT_IMAGE);
-    const [numTransaction, setNumTransaction] = useState<number>(0);
-    const {account, signAndSubmitTransaction} = useWallet();
-    const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
-        const val = event.target.value;
-        setter(val);
-    }
-
-    const onNumberChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: number) => number) | number)) => void) => {
-        const val = event.target.value;
-        setter(Number(val));
-    }
-
-    const addToTransactions = async (type: string, hash: string, data: string) => {
-        const num = numTransaction;
-        console.log(JSON.stringify({num: num, hash: hash, type: type, data: data}));
-        setNumTransaction(num + 1);
-    }
 
     const createV1Collection = async () => {
         // Ensure you're logged in
-        if (!account || !collectionName) return [];
-        const type = "Create V1 Collection";
+        if (!props.account || !collectionName) return [];
         const payload = {
             type: "entry_function_payload",
             function: `0x3::token::create_collection_script`,
@@ -51,16 +30,12 @@ function Launchpad(this: any) {
             ],
         };
 
-        let txn = await runTransaction(type, payload);
-        if (txn !== undefined) {
-            await addToTransactions(type, txn.hash, "");
-        }
+        await runTransaction(props.submitTransaction, payload);
     }
 
     const createV1Token = async () => {
         // Ensure you're logged in
-        if (!account || !collectionName || !tokenName) return [];
-        const type = "Create V1 Token";
+        if (!props.account || !collectionName || !tokenName) return [];
         const payload = {
             type: "entry_function_payload",
             function: `0x3::token::create_token_script`,
@@ -72,7 +47,7 @@ function Launchpad(this: any) {
                 1, // balance 1 (this is a NFT)
                 1, // maximum (this is a singular NFT)
                 tokenUri,
-                account.address, // Royalty account
+                props.account.address, // Royalty account
                 100, // royalty denominator
                 royaltyPercent, // royalty numerator
                 [true, true, true, true, true], // everything allowed mutable
@@ -81,16 +56,12 @@ function Launchpad(this: any) {
                 [], // Property types
             ],
         };
-        let txn = await runTransaction(type, payload);
-        if (txn !== undefined) {
-            await addToTransactions(type, txn.hash, "");
-        }
+        await runTransaction(props.submitTransaction, payload);
     }
 
     const createV2Collection = async () => {
         // Ensure you're logged in
-        if (!account || !collectionName) return [];
-        const type = "Create V2 Collection";
+        if (!props.account || !collectionName) return [];
         const payload = {
             type: "entry_function_payload",
             function: `0x4::aptos_token::create_collection`,
@@ -114,25 +85,12 @@ function Launchpad(this: any) {
             ],
         };
 
-        let txn = await runTransaction(type, payload);
-        if (txn !== undefined) {
-            let address = "unknown";
-            // Find the ObjectCore address in changes
-            for (let change of txn.changes) {
-                if (change.data.type === "0x1::object::ObjectCore") {
-                    address = change.address;
-                    break;
-                }
-            }
-
-            await addToTransactions(type, txn.hash, `Collection Address: ${address}`);
-        }
+        await runTransaction(props.submitTransaction, payload);
     }
 
     const createV2Token = async () => {
         // Ensure you're logged in
-        if (!account || !collectionName || !tokenName || !tokenUri) return [];
-        const type = "Create V2 Token";
+        if (!props.account || !collectionName || !tokenName || !tokenUri) return [];
         const payload = {
             type: "entry_function_payload",
             function: `0x4::aptos_token::mint`,
@@ -147,16 +105,12 @@ function Launchpad(this: any) {
                 []
             ],
         };
-        let txn = await runTransaction(type, payload);
-        if (txn !== undefined) {
-            await addToTransactions(type, txn.hash, `TokenAddress: ${txn.events[0].data.token}`);
-        }
+        await runTransaction(props.submitTransaction, payload);
     }
 
     const createSoulboundV2Token = async () => {
         // Ensure you're logged in
-        if (!account || !collectionName || !tokenName || !tokenUri) return [];
-        const type = "Create SoulboundV2 Token";
+        if (!props.account || !collectionName || !tokenName || !tokenUri) return [];
         const payload = {
             type: "entry_function_payload",
             function: `0x4::aptos_token::mint_soul_bound`,
@@ -169,26 +123,10 @@ function Launchpad(this: any) {
                 [],
                 [],
                 [],
-                account.address
+                props.account.address
             ],
         };
-        let txn = await runTransaction(type, payload);
-        if (txn !== undefined) {
-            await addToTransactions(type, txn.hash, `TokenAddress: ${txn.events[0].data.token}`);
-        }
-    }
-
-    const runTransaction = async (type: string, payload: any) => {
-        try {
-            const response = await signAndSubmitTransaction(payload);
-            await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
-            let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
-            return txn;
-        } catch (error: any) {
-            console.log("Failed to wait for txn" + error)
-        }
-
-        return undefined;
+        await runTransaction(props.submitTransaction, payload);
     }
 
     return (
