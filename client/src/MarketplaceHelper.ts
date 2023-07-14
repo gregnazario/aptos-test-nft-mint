@@ -194,9 +194,9 @@ export class Marketplace {
                 HexString.ensure(tokenCreator).hex(),
                 tokenCollection,
                 HexString.ensure(feeSchedule).hex(),
-                price,
-                amount,
-                expiration_time,
+                price.toString(),
+                amount.toString(),
+                expiration_time.toString(),
             ],
         );
     }
@@ -213,7 +213,7 @@ export class Marketplace {
             COLLECTION_OFFER,
             "init_for_tokenv2_entry",
             [coin],
-            [HexString.ensure(collection).hex(), HexString.ensure(feeSchedule).hex(), price, amount, expiration_time],
+            [HexString.ensure(collection).hex(), HexString.ensure(feeSchedule).hex(), price.toString(), amount.toString(), expiration_time.toString()],
         );
     }
 
@@ -242,7 +242,7 @@ export class Marketplace {
     ): TransactionPayload {
         return this.buildTransactionPayload(
             COLLECTION_OFFER,
-            "sell_tokenv1",
+            "sell_tokenv2",
             [coin],
             [HexString.ensure(collectionOffer).hex(), HexString.ensure(token).hex()],
         );
@@ -254,7 +254,6 @@ export class Marketplace {
         token: string,
         feeSchedule: MaybeHexString,
         price: bigint,
-        amount: bigint,
         expiration_time: bigint, // TODO: convert to time?
         coin: string = APTOS_COIN,
     ): TransactionPayload {
@@ -266,9 +265,8 @@ export class Marketplace {
                 HexString.ensure(tokenCreator).hex(),
                 token,
                 HexString.ensure(feeSchedule).hex(),
-                price,
-                amount,
-                expiration_time,
+                price.toString(),
+                expiration_time.toString(),
             ],
         );
     }
@@ -277,7 +275,6 @@ export class Marketplace {
         token: MaybeHexString,
         feeSchedule: MaybeHexString,
         price: bigint,
-        amount: bigint,
         expiration_time: bigint, // TODO: convert to time?
         coin: string = APTOS_COIN,
     ): TransactionPayload {
@@ -285,7 +282,7 @@ export class Marketplace {
             TOKEN_OFFER,
             "init_for_tokenv2_entry",
             [coin],
-            [HexString.ensure(token).hex(), HexString.ensure(feeSchedule).hex(), price, amount, expiration_time],
+            [HexString.ensure(token).hex(), HexString.ensure(feeSchedule).hex(), price.toString(), expiration_time.toString()],
         );
     }
 
@@ -314,7 +311,7 @@ export class Marketplace {
     ): TransactionPayload {
         return this.buildTransactionPayload(
             TOKEN_OFFER,
-            "sell_tokenv1",
+            "sell_tokenv2",
             [coin],
             [HexString.ensure(tokenOffer).hex(), HexString.ensure(token).hex()],
         );
@@ -425,8 +422,13 @@ export class Marketplace {
         return BigInt(outputs[0].toString());
     }
 
-    async getListings(contractAddress: MaybeHexString, marketplace: String, isDeleted: boolean): Promise<{
-        current_token_data: {},
+    async getListingsV2(contractAddress: MaybeHexString, marketplace: String, isDeleted: boolean): Promise<{
+        current_token_data: {
+            collection_id: string
+            token_data_id: string
+            token_name: string
+            token_uri: string
+        },
         price: number,
         listing_id: string,
         is_deleted: boolean,
@@ -436,18 +438,19 @@ export class Marketplace {
         contract_address: string
     }[]> {
         // FIXME: Support pagination
-        // FIXME add fee schedule
         const query =
             `query GetListings($contract_address:String!, $marketplace: String!, $is_deleted: Boolean!) {
                 nft_marketplace_v2_current_nft_marketplace_listings(where: {
                   contract_address: { _eq: $contract_address }
                   marketplace: { _eq: $marketplace }
                   is_deleted: { _eq: $is_deleted }
+                  current_token_data: {token_standard: {_eq: "v2"}}
                 }) {
                   current_token_data {
                     collection_id
                     token_data_id
                     token_name
+                    token_uri
                   }
                   price
                   listing_id
@@ -465,7 +468,12 @@ export class Marketplace {
         };
         let result = await this.queryIndexer<{
             nft_marketplace_v2_current_nft_marketplace_listings: {
-                current_token_data: {},
+                current_token_data: {
+                    collection_id: string
+                    token_data_id: string
+                    token_name: string
+                    token_uri: string
+                },
                 price: number,
                 listing_id: string,
                 is_deleted: boolean,
@@ -546,7 +554,17 @@ export class Marketplace {
         return await this.queryIndexer(query, variables);
     }
 
-    async getCollectionOffers(contractAddress: MaybeHexString, marketplace: String, collectionAddress: MaybeHexString, isDeleted: boolean): Promise<any> {
+    // {"nft_marketplace_v2_current_nft_marketplace_collection_offers":[{"buyer":"0x3e650cb888bc74421a4d8a0c35ddaf37608465d7fe4bf0aae092188568bab6b9","collection_id":"0x14a469a0522c6d08081d5e42ad489de1fa05f5a620d7815a2932fab524b8513e","collection_offer_id":"0xa55a02111b7cc3819eab7cf5b6dfcac7c23a39270a3af9c8ae92a33b6981efdd","current_collection_data":{"collection_name":"Pokemon"},"expiration_time":1689312497,"is_deleted":false,"item_price":100000000,"remaining_token_amount":1}]}
+    async getCollectionOffers(contractAddress: MaybeHexString, marketplace: String, collectionAddress: MaybeHexString, isDeleted: boolean): Promise<{
+        buyer: string,
+        collection_id: string,
+        collection_offer_id: string,
+        expiration_time: number,
+        current_collection_data: { collection_name: string },
+        item_price: number,
+        remaining_token_amount: number,
+        is_deleted: boolean
+    }[]> {
         const query =
             `query GetCollectionOffers($contract_address:String!, $marketplace: String!, $collection_id: String!, $is_deleted: Boolean!) {
               nft_marketplace_v2_current_nft_marketplace_collection_offers(where: {
@@ -574,7 +592,18 @@ export class Marketplace {
             is_deleted: isDeleted,
         };
 
-        return await this.queryIndexer(query, variables);
+        return (await this.queryIndexer<{
+            nft_marketplace_v2_current_nft_marketplace_collection_offers: {
+                buyer: string,
+                collection_id: string,
+                collection_offer_id: string,
+                expiration_time: number,
+                current_collection_data: { collection_name: string },
+                item_price: number,
+                remaining_token_amount: number,
+                is_deleted: boolean
+            }[]
+        }>(query, variables)).nft_marketplace_v2_current_nft_marketplace_collection_offers;
     }
 
     // Helpers

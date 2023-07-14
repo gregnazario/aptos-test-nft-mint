@@ -1,7 +1,7 @@
-import {Alert, Button, Col, Input, Row, Select} from "antd";
+import {Alert, Button, Col, Image, Input, Row, Select, Tooltip} from "antd";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
 import {useWallet} from "@aptos-labs/wallet-adapter-react";
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import {Marketplace as Helper} from "./MarketplaceHelper"
 import {HexString, Provider} from "aptos";
 
@@ -17,6 +17,7 @@ export const DEFAULT_TOKEN_NAME = "Test Token #1";
 export const DEFAULT_PROPERTY_VERSION = 0;
 export const DEFAULT_PRICE = "100000000";
 
+const APT = 100000000;
 const V1 = "V1";
 const V2 = "V2";
 const FIXED_PRICE = "Fixed Price";
@@ -33,10 +34,15 @@ function Marketplace(this: any) {
         fee_address: HexString,
         listing_fee: string,
         bidding_fee: string,
-        commission: string
+        commission: string,
     }>();
     // TODO: pass in wallet from outside component
     const {account, signAndSubmitTransaction} = useWallet();
+
+    useEffect(() => {
+        loadFeeSchedule()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [account])
 
     const loadFeeSchedule = async () => {
         // Ensure you're logged in
@@ -81,6 +87,9 @@ function Marketplace(this: any) {
         }
     }
 
+    const toApt = (num: string): number => {
+        return Number(num) / APT
+    }
 
     const runTransaction = async (type: string, payload: any) => {
         try {
@@ -129,9 +138,9 @@ function Marketplace(this: any) {
                     <p>Fee schedule details:</p>
                     <ol>
                         <li>{`Fees are sent to ${feeScheduleDetails?.fee_address}`}</li>
-                        <li>{`List fee is ${feeScheduleDetails?.listing_fee}`}</li>
-                        <li>{`Bid fee is ${feeScheduleDetails?.bidding_fee}`}</li>
-                        <li>{`Commission on ${DEFAULT_PRICE} is ${feeScheduleDetails?.commission}`}</li>
+                        <li>{`List fee is ${toApt(feeScheduleDetails?.listing_fee)} APT`}</li>
+                        <li>{`Bid fee is ${toApt(feeScheduleDetails?.bidding_fee)} APT`}</li>
+                        <li>{`Commission on ${toApt(DEFAULT_PRICE)} APT is ${toApt(feeScheduleDetails?.commission)} APT`}</li>
                     </ol>
                 </Col>
             </Row>}
@@ -201,7 +210,7 @@ function Marketplace(this: any) {
                     {type === FIXED_PRICE && <FixedPriceListingManagement/>}
                     {type === AUCTION && <AuctionListingManagement/>}
                     {tokenStandard === V1 && <ExtractTokenV1/>}
-                    {(type === FIXED_PRICE || type === AUCTION) && <Listings/>}
+                    {(type === FIXED_PRICE) && <Listings/>}
                     {type === TOKEN_OFFERS && <TokenOffers/>}
                     {type === COLLECTION_OFFERS && <CollectionOffers/>}
                 </Col>
@@ -1140,7 +1149,10 @@ function ExtractTokenV1(this: any) {
 
 function Listings(this: any) {
     const [listings, setListings] = useState<{
-        current_token_data: {},
+        collection_id: string,
+        token_data_id: string,
+        token_name: string,
+        token_uri: string,
         price: number,
         listing_id: string,
         is_deleted: boolean,
@@ -1149,10 +1161,64 @@ function Listings(this: any) {
         marketplace: string,
         contract_address: string
     }[]>();
+    const {account, signAndSubmitTransaction} = useWallet();
+
+    useEffect(() => {
+        loadListings()
+    }, [account])
 
     const loadListings = async () => {
-        let listings = (await MARKETPLACE_HELPER.getListings(MODULE_ADDRESS, "example_v2_marketplace", false));
-        setListings(listings);
+        let listings = (await MARKETPLACE_HELPER.getListingsV2(MODULE_ADDRESS, "example_v2_marketplace", false));
+        let parsed = [];
+        for (const listing of listings) {
+            // TODO: Probably need to fix to get latest URI
+            parsed.push(
+                {
+                    collection_id: listing.current_token_data.collection_id,
+                    token_data_id: listing.current_token_data.token_data_id,
+                    token_name: listing.current_token_data.token_name,
+                    token_uri: listing.current_token_data?.token_uri,
+                    price: listing.price,
+                    listing_id: listing.listing_id,
+                    is_deleted: listing.is_deleted,
+                    token_amount: listing.token_amount,
+                    seller: listing.seller,
+                    marketplace: listing.marketplace,
+                    contract_address: listing.contract_address
+                }
+            )
+        }
+
+        setListings(parsed);
+    }
+
+    const cancelListing = async (listingAddress: string) => {
+        // Ensure you're logged in
+        if (!account) return [];
+        const type = "Cancel fixed price listing";
+        const payload = await MARKETPLACE_HELPER.endFixedPriceListing(listingAddress);
+        await runTransaction(type, payload);
+    }
+
+    const purchaseListing = async (listingAddress: string) => {
+        // Ensure you're logged in
+        if (!account) return [];
+        const type = "Purchase listing";
+        const payload = await MARKETPLACE_HELPER.purchaseListing(listingAddress);
+        await runTransaction(type, payload);
+    }
+
+    const runTransaction = async (type: string, payload: any) => {
+        try {
+            const response = await signAndSubmitTransaction(payload);
+            await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
+            let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
+            return txn;
+        } catch (error: any) {
+            console.log("Failed to wait for txn" + error)
+        }
+
+        return undefined;
     }
 
     return (
@@ -1175,14 +1241,44 @@ function Listings(this: any) {
                 <Col span={8}>
                     <ol>
                         {listings?.map(({
-                                            current_token_data,
+                                            token_name,
+                                            token_uri,
                                             price,
                                             listing_id,
                                             seller,
                                         }) =>
                             <li>
-                                Listing {listing_id} : Price {price / 100000000} APT :
-                                Seller {seller} data: {JSON.stringify(current_token_data)}
+                                <Row align="middle">
+                                    <Col>
+                                        <Tooltip placement="right" title={``}>
+                                            <b>Listing {listing_id}</b> - {token_name} - {price / 100000000} APT | Sold
+                                            by {seller}
+                                            <Image
+                                                width={50}
+                                                src={token_uri}
+                                                alt={"img"}
+                                            />
+                                        </Tooltip>
+                                    </Col>
+                                    <Col>
+                                        <Button
+                                            onClick={() => purchaseListing(listing_id)}
+                                            type="primary"
+                                            style={{height: "40px", backgroundColor: "#3f67ff"}}
+                                        >
+                                            Buy now
+                                        </Button>
+                                    </Col>
+                                    <Col>
+                                        {seller === account?.address && <Button
+                                            onClick={() => cancelListing(listing_id)}
+                                            type="primary"
+                                            style={{height: "40px", backgroundColor: "#3f67ff"}}
+                                        >
+                                            Cancel listing
+                                        </Button>}
+                                    </Col>
+                                </Row>
                             </li>)}
                     </ol>
                 </Col>
@@ -1196,7 +1292,6 @@ function V2TokenOffers(this: any) {
     const [tokenAddress, setTokenAddress] = useState<string>("");
     const [feeSchedule, setFeeSchedule] = useState<string>(DEFAULT_FEE_SCHEDULE);
     const [price, setPrice] = useState<bigint>(BigInt(DEFAULT_PRICE));
-    const [amount, setAmount] = useState<bigint>(BigInt(1));
     const [expirationSecs, setExpirationSecs] = useState<bigint>(BigInt(3600));
     const {account, signAndSubmitTransaction} = useWallet();
 
@@ -1214,7 +1309,7 @@ function V2TokenOffers(this: any) {
         if (!account || !tokenAddress) return [];
         const type = "Purchase listing";
         const expiration_time = BigInt(Math.floor(new Date().getTime() / 1000)) + expirationSecs;
-        const payload = await MARKETPLACE_HELPER.initTokenOfferForTokenv2(tokenAddress, feeSchedule, price, amount, expiration_time);
+        const payload = await MARKETPLACE_HELPER.initTokenOfferForTokenv2(tokenAddress, feeSchedule, price, expiration_time);
         await runTransaction(type, payload);
     }
 
@@ -1297,22 +1392,6 @@ function V2TokenOffers(this: any) {
                         placeholder="Expiration secs"
                         size="large"
                         defaultValue={3600}
-                    />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={4}>
-                    <p>Amount: </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onBigIntChange(event, setAmount)
-                        }}
-                        style={{width: "calc(100% - 60px)"}}
-                        placeholder="amount"
-                        size="large"
-                        defaultValue={1}
                     />
                 </Col>
             </Row>
@@ -1526,8 +1605,19 @@ function TokenOffers(this: any) {
 }
 
 function CollectionOffers(this: any) {
-    const [collectionOffers, setCollectionOffers] = useState<any>("");
+    const [collectionOffers, setCollectionOffers] = useState<{
+        buyer: string,
+        collection_id: string,
+        collection_offer_id: string,
+        expiration_time: number,
+        current_collection_data: { collection_name: string },
+        item_price: number,
+        remaining_token_amount: number,
+        is_deleted: boolean
+    }[]>();
     const [collectionAddress, setCollectionAddress] = useState<string>("");
+    const [tokenAddress, setTokenAddress] = useState<string>("");
+    const {account, signAndSubmitTransaction} = useWallet();
 
     const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
         const val = event.target.value;
@@ -1537,6 +1627,35 @@ function CollectionOffers(this: any) {
     const loadCollectionOffers = async () => {
         let collectionOffers = await MARKETPLACE_HELPER.getCollectionOffers(MODULE_ADDRESS, "example_v2_marketplace", collectionAddress, false);
         setCollectionOffers(collectionOffers);
+    }
+
+    const fillCollectionOffer = async (offerAddress: string) => {
+        // Ensure you're logged in
+        if (!account || !offerAddress) return [];
+        const type = "Purchase listing";
+        const payload = await MARKETPLACE_HELPER.fillCollectionOfferForTokenv2(offerAddress, tokenAddress);
+        await runTransaction(type, payload);
+    }
+
+    const cancelCollectionOffer = async (offerAddress: string) => {
+        // Ensure you're logged in
+        if (!account || !offerAddress) return [];
+        const type = "Cancel listing";
+        const payload = await MARKETPLACE_HELPER.cancelCollectionOffer(offerAddress);
+        await runTransaction(type, payload);
+    }
+
+    const runTransaction = async (type: string, payload: any) => {
+        try {
+            const response = await signAndSubmitTransaction(payload);
+            await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
+            let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
+            return txn;
+        } catch (error: any) {
+            console.log("Failed to wait for txn" + error)
+        }
+
+        return undefined;
     }
 
     return (
@@ -1561,6 +1680,22 @@ function CollectionOffers(this: any) {
                 </Col>
             </Row>
             <Row align="middle">
+                <Col span={4}>
+                    <p>Token Address to sell: </p>
+                </Col>
+                <Col flex={"auto"}>
+                    <Input
+                        onChange={(event) => {
+                            onStringChange(event, setTokenAddress)
+                        }}
+                        style={{width: "calc(100% - 60px)"}}
+                        placeholder="TokenAddress"
+                        size="large"
+                        defaultValue={""}
+                    />
+                </Col>
+            </Row>
+            <Row align="middle">
                 <Col span={2} offset={4}>
                     <Button
                         onClick={() => loadCollectionOffers()}
@@ -1572,8 +1707,50 @@ function CollectionOffers(this: any) {
                 </Col>
             </Row>
             <Row align="middle">
-                <Col>
-                    <p>Collection Offers: {JSON.stringify(collectionOffers)}</p>
+                <Col span={8}>
+                    <ol>
+                        {collectionOffers?.map((
+                            {
+                                buyer,
+                                current_collection_data,
+                                collection_offer_id,
+                                expiration_time,
+                                item_price,
+                                remaining_token_amount
+
+                            }) =>
+                            <li>
+                                <Row align="middle">
+                                    <Col>
+                                        <Tooltip placement="right" title={``}>
+                                            <b>Offer {collection_offer_id}</b> - {current_collection_data.collection_name} - {item_price / 100000000} APT
+                                            | Requeested
+                                            by {buyer}, expires at {expiration_time}, {remaining_token_amount} offers
+                                            remaining
+                                        </Tooltip>
+                                    </Col>
+                                    <Col>
+                                        <Button
+                                            onClick={() => fillCollectionOffer(collection_offer_id)}
+                                            type="primary"
+                                            style={{height: "40px", backgroundColor: "#3f67ff"}}
+                                        >
+                                            Sell now
+                                        </Button>
+                                    </Col>
+                                    <Col>
+                                        {buyer === account?.address && <Button
+                                            onClick={() => cancelCollectionOffer(collection_offer_id)}
+                                            type="primary"
+                                            style={{height: "40px", backgroundColor: "#3f67ff"}}
+                                        >
+                                            Cancel listing
+                                        </Button>}
+                                    </Col>
+                                </Row>
+                            </li>)}
+                    </ol>
+                    {JSON.stringify(collectionOffers)}
                 </Col>
             </Row>
         </>
