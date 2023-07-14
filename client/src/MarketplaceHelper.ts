@@ -23,6 +23,7 @@ type TransactionPayload = {
 const APTOS_COIN: string = "0x1::aptos_coin::AptosCoin";
 const COIN_LISTING: string = "coin_listing";
 const COLLECTION_OFFER: string = "collection_offer";
+const TOKEN_OFFER: string = "token_offer";
 const FEE_SCHEDULE: string = "fee_schedule";
 const LISTING: string = "listing";
 
@@ -244,6 +245,78 @@ export class Marketplace {
             "sell_tokenv1",
             [coin],
             [HexString.ensure(collectionOffer).hex(), HexString.ensure(token).hex()],
+        );
+    }
+
+
+    initTokenOfferForTokenv1(
+        tokenCreator: MaybeHexString,
+        token: string,
+        feeSchedule: MaybeHexString,
+        price: bigint,
+        amount: bigint,
+        expiration_time: bigint, // TODO: convert to time?
+        coin: string = APTOS_COIN,
+    ): TransactionPayload {
+        return this.buildTransactionPayload(
+            TOKEN_OFFER,
+            "init_for_tokenv1_entry",
+            [coin],
+            [
+                HexString.ensure(tokenCreator).hex(),
+                token,
+                HexString.ensure(feeSchedule).hex(),
+                price,
+                amount,
+                expiration_time,
+            ],
+        );
+    }
+
+    initTokenOfferForTokenv2(
+        token: MaybeHexString,
+        feeSchedule: MaybeHexString,
+        price: bigint,
+        amount: bigint,
+        expiration_time: bigint, // TODO: convert to time?
+        coin: string = APTOS_COIN,
+    ): TransactionPayload {
+        return this.buildTransactionPayload(
+            TOKEN_OFFER,
+            "init_for_tokenv2_entry",
+            [coin],
+            [HexString.ensure(token).hex(), HexString.ensure(feeSchedule).hex(), price, amount, expiration_time],
+        );
+    }
+
+    cancelTokenOffer(tokenOffer: MaybeHexString, coin: string = APTOS_COIN): TransactionPayload {
+        return this.buildTransactionPayload(TOKEN_OFFER, "cancel", [coin], [HexString.ensure(tokenOffer).hex()]);
+    }
+
+    fillTokenOfferForTokenv1(
+        tokenOffer: MaybeHexString,
+        tokenName: string,
+        propertyVersion: bigint,
+        coin: string = APTOS_COIN,
+    ): TransactionPayload {
+        return this.buildTransactionPayload(
+            TOKEN_OFFER,
+            "sell_tokenv1_entry",
+            [coin],
+            [HexString.ensure(tokenOffer).hex(), tokenName, propertyVersion.toString(10)],
+        );
+    }
+
+    fillTokenOfferForTokenv2(
+        tokenOffer: MaybeHexString,
+        token: MaybeHexString,
+        coin: string = APTOS_COIN,
+    ): TransactionPayload {
+        return this.buildTransactionPayload(
+            TOKEN_OFFER,
+            "sell_tokenv1",
+            [coin],
+            [HexString.ensure(tokenOffer).hex(), HexString.ensure(token).hex()],
         );
     }
 
