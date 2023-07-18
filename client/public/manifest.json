@@ -1,6 +1,6 @@
 {
-  "short_name": "Aptos Tic Tac Toe",
-  "name": "Aptos Tic Tac Toe Example",
+  "short_name": "NFT Playground",
+  "name": "NFT Playground Example",
   "icons": [
     {
       "src": "favicon.ico",
@@ -8,12 +8,7 @@
       "type": "image/x-icon"
     },
     {
-      "src": "tic-tac-toe-192.png",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "tic-tac-toe-512.png",
+      "src": "test.png",
       "type": "image/png",
       "sizes": "512x512"
     }
