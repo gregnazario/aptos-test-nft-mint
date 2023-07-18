@@ -3,7 +3,7 @@ import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
 import {useState} from "react";
 import {onNumberChange, onStringChange, runTransaction, TransactionContext} from "./Helper";
 
-const DEFAULT_IMAGE = "https://3zglr2262zd6f45qo6nqfycybj4acwnughgzual3oxdmu7wlz36a.arweave.net/3ky4617WR-LzsHebAuBYCngBWbQxzZoBe3XGyn7Lzvw/0.png"
+const DEFAULT_IMAGE = "https://cloudflare-ipfs.com/ipfs/QmQ1b4JVoPETE9fLXkmGcXoheqJf2UZ4qTKKfvrmC2W4PF"
 
 function Launchpad(props: TransactionContext) {
     const [collectionName, setCollectionName] = useState<string>("Test Collection");
