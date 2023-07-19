@@ -219,6 +219,8 @@ function Marketplace(props: TransactionContext) {
                         <ExtractTokenV1 account={props.account} submitTransaction={props.submitTransaction}/>}
                     {(type === FIXED_PRICE) &&
                         <Listings account={props.account} submitTransaction={props.submitTransaction}/>}
+                    {(type === AUCTION) &&
+                        <AuctionListings account={props.account} submitTransaction={props.submitTransaction}/>}
                     {type === TOKEN_OFFERS &&
                         <TokenOffers account={props.account} submitTransaction={props.submitTransaction}/>}
                     {type === COLLECTION_OFFERS &&
@@ -418,7 +420,7 @@ function V1AuctionListing(props: TransactionContext) {
             BigInt(100),
             BigInt(now + auctionDuration),
             BigInt(auctionDuration),
-            // TODO: Buy now
+            BigInt(DEFAULT_PRICE)
         );
 
         let txn = await runTransaction(props.submitTransaction, payload);
@@ -700,7 +702,8 @@ function V2AuctionListing(props: TransactionContext) {
             BigInt(listingPrice),
             BigInt(1000000),
             BigInt(now + auctionDuration),
-            BigInt(auctionDuration)
+            BigInt(auctionDuration),
+            BigInt(DEFAULT_PRICE)
         );
 
         let txn = await runTransaction(props.submitTransaction, payload);
@@ -888,6 +891,13 @@ function AuctionListingManagement(props: TransactionContext) {
         await runTransaction(props.submitTransaction, payload);
     }
 
+    const buyNowAuction = async () => {
+        // Ensure you're logged in
+        if (!props.account || !listingAddress) return [];
+        const payload = await MARKETPLACE_HELPER.purchaseListing(listingAddress);
+        await runTransaction(props.submitTransaction, payload);
+    }
+
     return (
         <>
             <Row align="middle">
@@ -929,6 +939,15 @@ function AuctionListingManagement(props: TransactionContext) {
                 <Col span={2} offset={4}>
                     <Button
                         onClick={() => bidAuction()}
+                        type="primary"
+                        style={{height: "40px", backgroundColor: "#3f67ff"}}
+                    >
+                        Buy Listing
+                    </Button>
+                </Col>
+                <Col span={2} offset={4}>
+                    <Button
+                        onClick={() => buyNowAuction()}
                         type="primary"
                         style={{height: "40px", backgroundColor: "#3f67ff"}}
                     >
@@ -1128,6 +1147,137 @@ function Listings(props: TransactionContext) {
     );
 }
 
+
+function AuctionListings(props: TransactionContext) {
+    const [listings, setListings] = useState<{
+        collection_id: string,
+        token_data_id: string,
+        token_name: string,
+        token_uri: string,
+        price: number,
+        listing_id: string,
+        is_deleted: boolean,
+        token_amount: number,
+        seller: string,
+        marketplace: string,
+        contract_address: string
+    }[]>();
+    const [listingsError, setListingsError] = useState<string>();
+
+    useEffect(() => {
+        loadListings()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [props.account])
+
+    const loadListings = async () => {
+        try {
+            let listings = (await MARKETPLACE_HELPER.getV2Auctions(MODULE_ADDRESS, "example_v2_marketplace", false));
+            let parsed = [];
+            for (const listing of listings) {
+                parsed.push(
+                    {
+                        collection_id: listing.current_token_data.collection_id,
+                        token_data_id: listing.current_token_data.token_data_id,
+                        token_name: listing.current_token_data.token_name,
+                        token_uri: listing.current_token_data?.token_uri,
+                        price: listing.starting_bid_price,
+                        listing_id: listing.listing_id,
+                        is_deleted: listing.is_deleted,
+                        token_amount: listing.token_amount,
+                        seller: listing.seller,
+                        marketplace: listing.marketplace,
+                        contract_address: listing.contract_address
+                    }
+                )
+            }
+            setListingsError("");
+            setListings(parsed);
+        } catch (error: any) {
+            setListingsError(`Failed to load listings ${listings}`);
+            setListings([]);
+        }
+    }
+
+    const cancelListing = async (listingAddress: string) => {
+        // Ensure you're logged in
+        if (!props.account) return [];
+        const payload = await MARKETPLACE_HELPER.endFixedPriceListing(listingAddress);
+        await runTransaction(props.submitTransaction, payload);
+    }
+
+    const purchaseListing = async (listingAddress: string) => {
+        // Ensure you're logged in
+        if (!props.account) return [];
+        const payload = await MARKETPLACE_HELPER.purchaseListing(listingAddress);
+        await runTransaction(props.submitTransaction, payload);
+    }
+
+    return (
+        <>
+            <Row align="middle">
+                <h3>Auctions</h3>
+            </Row>
+            <Row align="middle">
+                <Col span={2} offset={4}>
+                    <Button
+                        onClick={() => loadListings()}
+                        type="primary"
+                        style={{height: "40px", backgroundColor: "#3f67ff"}}
+                    >
+                        Load Listings
+                    </Button>
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={8}>
+                    {!listingsError && <ol>
+                        {listings?.map(({
+                                            token_name,
+                                            token_uri,
+                                            price,
+                                            listing_id,
+                                            seller,
+                                        }) =>
+                            <li>
+                                <Row align="middle">
+                                    <Col>
+                                        <Tooltip placement="right" title={``}>
+                                            <b>Listing {listing_id}</b> - {token_name} - {price / 100000000} APT | Sold
+                                            by {seller}
+                                            <Image
+                                                width={50}
+                                                src={token_uri}
+                                                alt={"img"}
+                                            />
+                                        </Tooltip>
+                                    </Col>
+                                    <Col>
+                                        <Button
+                                            onClick={() => purchaseListing(listing_id)}
+                                            type="primary"
+                                            style={{height: "40px", backgroundColor: "#3f67ff"}}
+                                        >
+                                            Buy now
+                                        </Button>
+                                    </Col>
+                                    <Col>
+                                        {seller === props.account?.address && <Button
+                                            onClick={() => cancelListing(listing_id)}
+                                            type="primary"
+                                            style={{height: "40px", backgroundColor: "#3f67ff"}}
+                                        >
+                                            Cancel listing
+                                        </Button>}
+                                    </Col>
+                                </Row>
+                            </li>)}
+                    </ol>}
+                    {listingsError && <Alert type="error" message={listingsError}/>}
+                </Col>
+            </Row>
+        </>
+    );
+}
 
 function V2TokenOffers(props: TransactionContext) {
     const [tokenAddress, setTokenAddress] = useState<string>("");
