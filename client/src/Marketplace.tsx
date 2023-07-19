@@ -2,14 +2,13 @@ import {Alert, Button, Col, Image, Input, Row, Select, Tooltip} from "antd";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
 import {useEffect, useState} from "react";
 import {Marketplace as Helper} from "./MarketplaceHelper"
-import {HexString} from "aptos";
 import {
     onStringChange,
     onNumberChange,
     onBigIntChange,
     runTransaction,
     DEVNET_PROVIDER,
-     TransactionContext
+    TransactionContext
 } from "./Helper";
 
 export const MODULE_ADDRESS = "0xeb36546237930294a8a9fec1e5d42d9633e9e9355eec3fa80f2610a29d95e152";
@@ -33,7 +32,8 @@ function Marketplace(props: TransactionContext) {
     const [type, setType] = useState<string>(FIXED_PRICE);
     const [feeSchedule, setFeeSchedule] = useState<string>(DEFAULT_FEE_SCHEDULE);
     const [feeScheduleDetails, setFeeScheduleDetails] = useState<{
-        fee_address: HexString,
+        error: string | null,
+        fee_address: string,
         listing_fee: string,
         bidding_fee: string,
         commission: string,
@@ -48,17 +48,29 @@ function Marketplace(props: TransactionContext) {
         // Ensure you're logged in
         if (!props.account) return [];
 
-        let fee_address = await MARKETPLACE_HELPER.feeAddress(feeSchedule);
-        let listing_fee = await MARKETPLACE_HELPER.listingFee(feeSchedule);
-        let bidding_fee = await MARKETPLACE_HELPER.biddingFee(feeSchedule);
-        let commission = await MARKETPLACE_HELPER.commission(feeSchedule, BigInt(DEFAULT_PRICE));
+        try {
+            let fee_address = await MARKETPLACE_HELPER.feeAddress(feeSchedule);
+            let listing_fee = await MARKETPLACE_HELPER.listingFee(feeSchedule);
+            let bidding_fee = await MARKETPLACE_HELPER.biddingFee(feeSchedule);
+            let commission = await MARKETPLACE_HELPER.commission(feeSchedule, BigInt(DEFAULT_PRICE));
 
-        setFeeScheduleDetails({
-            fee_address: fee_address,
-            listing_fee: listing_fee.toString(),
-            bidding_fee: bidding_fee.toString(),
-            commission: commission.toString()
-        })
+            setFeeScheduleDetails({
+                error: null,
+                fee_address: fee_address.hex(),
+                listing_fee: listing_fee.toString(),
+                bidding_fee: bidding_fee.toString(),
+                commission: commission.toString()
+            })
+        } catch (error: any) {
+            setFeeScheduleDetails({
+                error: `Failed to load fee schedule ${error}`,
+                fee_address: "",
+                listing_fee: "",
+                bidding_fee: "",
+                commission: ""
+            })
+        }
+
     }
 
     const createFeeSchedule = async () => {
@@ -86,7 +98,7 @@ function Marketplace(props: TransactionContext) {
     }
 
     return (
-        <>
+        <>/Details
             <Row align="middle">
                 <Col flex={"auto"}>
                     <h1>Deploy marketplace fee schedule</h1>
@@ -114,7 +126,7 @@ function Marketplace(props: TransactionContext) {
                     </Button>
                 </Col>
             </Row>
-            {feeScheduleDetails && <Row align="middle">
+            {feeScheduleDetails && !feeScheduleDetails.error && <Row align="middle">
                 <Col flex={"auto"}>
                     <p>Fee schedule details:</p>
                     <ol>
@@ -123,6 +135,11 @@ function Marketplace(props: TransactionContext) {
                         <li>{`Bid fee is ${toApt(feeScheduleDetails?.bidding_fee)} APT`}</li>
                         <li>{`Commission on ${toApt(DEFAULT_PRICE)} APT is ${toApt(feeScheduleDetails?.commission)} APT`}</li>
                     </ol>
+                </Col>
+            </Row>}
+            {feeScheduleDetails && feeScheduleDetails.error && <Row align="middle">
+                <Col flex={"auto"}>
+                    <Alert type="error" message={`Failed to load fee schedule ${feeScheduleDetails.error}`}/>
                 </Col>
             </Row>}
             <Row align="middle">
@@ -174,26 +191,38 @@ function Marketplace(props: TransactionContext) {
                             <h2>Listing NFTs</h2>
                         </Col>
                     </Row>
-                    {tokenStandard === V1 && type === FIXED_PRICE && <V1FixedListing account={props.account} submitTransaction={props.submitTransaction}/>}
-                    {tokenStandard === V1 && type === AUCTION && <V1AuctionListing account={props.account} submitTransaction={props.submitTransaction}/>}
+                    {tokenStandard === V1 && type === FIXED_PRICE &&
+                        <V1FixedListing account={props.account} submitTransaction={props.submitTransaction}/>}
+                    {tokenStandard === V1 && type === AUCTION &&
+                        <V1AuctionListing account={props.account} submitTransaction={props.submitTransaction}/>}
                     {tokenStandard === V1 && type === TOKEN_OFFERS && <Alert type="error" message="Not implemented"/>}
                     {tokenStandard === V1 && type === COLLECTION_OFFERS &&
                         <Alert type="error" message="Not implemented"/>}
-                    {tokenStandard === V2 && type === FIXED_PRICE && <V2FixedListing account={props.account} submitTransaction={props.submitTransaction}/>}
-                    {tokenStandard === V2 && type === AUCTION && <V2AuctionListing account={props.account} submitTransaction={props.submitTransaction}/>}
-                    {tokenStandard === V2 && type === TOKEN_OFFERS && <V2TokenOffers account={props.account} submitTransaction={props.submitTransaction}/>}
-                    {tokenStandard === V2 && type === COLLECTION_OFFERS && <V2CollectionOffers account={props.account} submitTransaction={props.submitTransaction}/>}
+                    {tokenStandard === V2 && type === FIXED_PRICE &&
+                        <V2FixedListing account={props.account} submitTransaction={props.submitTransaction}/>}
+                    {tokenStandard === V2 && type === AUCTION &&
+                        <V2AuctionListing account={props.account} submitTransaction={props.submitTransaction}/>}
+                    {tokenStandard === V2 && type === TOKEN_OFFERS &&
+                        <V2TokenOffers account={props.account} submitTransaction={props.submitTransaction}/>}
+                    {tokenStandard === V2 && type === COLLECTION_OFFERS &&
+                        <V2CollectionOffers account={props.account} submitTransaction={props.submitTransaction}/>}
                     <Row align="middle">
                         <Col>
                             <h2>Interacting with Listings</h2>
                         </Col>
                     </Row>
-                    {type === FIXED_PRICE && <FixedPriceListingManagement account={props.account} submitTransaction={props.submitTransaction}/>}
-                    {type === AUCTION && <AuctionListingManagement account={props.account} submitTransaction={props.submitTransaction}/>}
-                    {tokenStandard === V1 && <ExtractTokenV1 account={props.account} submitTransaction={props.submitTransaction}/>}
-                    {(type === FIXED_PRICE) && <Listings account={props.account} submitTransaction={props.submitTransaction}/>}
-                    {type === TOKEN_OFFERS && <TokenOffers account={props.account} submitTransaction={props.submitTransaction}/>}
-                    {type === COLLECTION_OFFERS && <CollectionOffers account={props.account} submitTransaction={props.submitTransaction} />}
+                    {type === FIXED_PRICE && <FixedPriceListingManagement account={props.account}
+                                                                          submitTransaction={props.submitTransaction}/>}
+                    {type === AUCTION &&
+                        <AuctionListingManagement account={props.account} submitTransaction={props.submitTransaction}/>}
+                    {tokenStandard === V1 &&
+                        <ExtractTokenV1 account={props.account} submitTransaction={props.submitTransaction}/>}
+                    {(type === FIXED_PRICE) &&
+                        <Listings account={props.account} submitTransaction={props.submitTransaction}/>}
+                    {type === TOKEN_OFFERS &&
+                        <TokenOffers account={props.account} submitTransaction={props.submitTransaction}/>}
+                    {type === COLLECTION_OFFERS &&
+                        <CollectionOffers account={props.account} submitTransaction={props.submitTransaction}/>}
                 </Col>
             </Row>
         </>
@@ -982,33 +1011,40 @@ function Listings(props: TransactionContext) {
         marketplace: string,
         contract_address: string
     }[]>();
+    const [listingsError, setListingsError] = useState<string>();
 
     useEffect(() => {
         loadListings()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [props.account])
 
     const loadListings = async () => {
-        let listings = (await MARKETPLACE_HELPER.getV2Listings(MODULE_ADDRESS, "example_v2_marketplace", false));
-        let parsed = [];
-        for (const listing of listings) {
-            parsed.push(
-                {
-                    collection_id: listing.current_token_data.collection_id,
-                    token_data_id: listing.current_token_data.token_data_id,
-                    token_name: listing.current_token_data.token_name,
-                    token_uri: listing.current_token_data?.token_uri,
-                    price: listing.price,
-                    listing_id: listing.listing_id,
-                    is_deleted: listing.is_deleted,
-                    token_amount: listing.token_amount,
-                    seller: listing.seller,
-                    marketplace: listing.marketplace,
-                    contract_address: listing.contract_address
-                }
-            )
+        try {
+            let listings = (await MARKETPLACE_HELPER.getV2Listings(MODULE_ADDRESS, "example_v2_marketplace", false));
+            let parsed = [];
+            for (const listing of listings) {
+                parsed.push(
+                    {
+                        collection_id: listing.current_token_data.collection_id,
+                        token_data_id: listing.current_token_data.token_data_id,
+                        token_name: listing.current_token_data.token_name,
+                        token_uri: listing.current_token_data?.token_uri,
+                        price: listing.price,
+                        listing_id: listing.listing_id,
+                        is_deleted: listing.is_deleted,
+                        token_amount: listing.token_amount,
+                        seller: listing.seller,
+                        marketplace: listing.marketplace,
+                        contract_address: listing.contract_address
+                    }
+                )
+            }
+            setListingsError("");
+            setListings(parsed);
+        } catch (error: any) {
+            setListingsError(`Failed to load listings ${listings}`);
+            setListings([]);
         }
-
-        setListings(parsed);
     }
 
     const cancelListing = async (listingAddress: string) => {
@@ -1043,7 +1079,7 @@ function Listings(props: TransactionContext) {
             </Row>
             <Row align="middle">
                 <Col span={8}>
-                    <ol>
+                    {!listingsError && <ol>
                         {listings?.map(({
                                             token_name,
                                             token_uri,
@@ -1084,7 +1120,8 @@ function Listings(props: TransactionContext) {
                                     </Col>
                                 </Row>
                             </li>)}
-                    </ol>
+                    </ol>}
+                    {listingsError && <Alert type="error" message={listingsError}/>}
                 </Col>
             </Row>
         </>
