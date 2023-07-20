@@ -22,12 +22,7 @@ type TransactionPayload = {
 
 type V2ListingsQueryResponse = { nft_marketplace_v2_current_nft_marketplace_listings: V2ListingsResponse };
 export type V2ListingsResponse = Array<{
-    current_token_data: {
-        collection_id: string
-        token_data_id: string
-        token_name: string
-        token_uri: string
-    },
+    token_data_id: string,
     price: number,
     listing_id: string,
     is_deleted: boolean,
@@ -43,14 +38,9 @@ export const V2_LISTINGS_ALL_QUERY =
                   contract_address: { _eq: $contract_address }
                   marketplace: { _eq: $marketplace }
                   is_deleted: { _eq: $is_deleted }
-                  current_token_data: {token_standard: {_eq: "v2"}}
+                  token_standard: {_eq: "v2"}
                 }) {
-                  current_token_data {
-                    collection_id
-                    token_data_id
-                    token_name
-                    token_uri
-                  }
+                  token_data_id
                   price
                   listing_id
                   is_deleted
