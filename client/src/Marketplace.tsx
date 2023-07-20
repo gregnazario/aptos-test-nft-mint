@@ -115,6 +115,11 @@ function Marketplace(props: TransactionContext) {
         <>/Details
             <Row align="middle">
                 <Col flex={"auto"}>
+                    <h1>Marketplace contract address {MODULE_ADDRESS}</h1>
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col flex={"auto"}>
                     <h1>Deploy marketplace fee schedule</h1>
                 </Col>
             </Row>
