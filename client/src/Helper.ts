@@ -1,4 +1,4 @@
-import {Provider, Types} from "aptos";
+import {Network, Provider, Types} from "aptos";
 import {AccountInfo} from "@aptos-labs/wallet-adapter-core";
 
 /*
@@ -11,13 +11,33 @@ export const DEVNET_PROVIDER = new Provider({
     indexerUrl: "https://ideal-cricket-94.hasura.app/v1/graphql"
 })
 
-export type TransactionContext = { account: AccountInfo | null, submitTransaction: SubmitTransaction };
+export const TESTNET_PROVIDER = new Provider(Network.TESTNET);
+export const MAINNET_PROVIDER = new Provider(Network.MAINNET);
+
+export type TransactionContext = {
+    network: Network,
+    account: AccountInfo | null,
+    submitTransaction: SubmitTransaction
+};
 export type SubmitTransaction = <T extends Types.TransactionPayload, V>(transaction: T, options?: V) => Promise<any>;
-export const runTransaction = async <T extends Types.TransactionPayload>(submitTransaction: SubmitTransaction, payload: T) => {
+
+export const getProvider = (network: Network) => {
+    if (network === Network.MAINNET) {
+        return MAINNET_PROVIDER;
+    } else if (network === Network.TESTNET) {
+        return TESTNET_PROVIDER;
+    } else if (network === Network.DEVNET) {
+        return DEVNET_PROVIDER
+    }
+    throw new Error("Unknown network type")
+}
+
+export const runTransaction = async <T extends Types.TransactionPayload>(txnContext: TransactionContext, payload: T) => {
     try {
-        const response = await submitTransaction(payload);
-        await DEVNET_PROVIDER.aptosClient.waitForTransaction(response.hash);
-        let txn = await DEVNET_PROVIDER.aptosClient.getTransactionByHash(response.hash) as any;
+        const provider = getProvider(txnContext.network);
+        const response = await txnContext.submitTransaction(payload);
+        await provider.aptosClient.waitForTransaction(response.hash);
+        let txn = await provider.aptosClient.getTransactionByHash(response.hash) as any;
         return txn;
     } catch (error: any) {
         console.log("Failed to wait for txn" + error)

@@ -7,13 +7,14 @@ import {
     onNumberChange,
     onBigIntChange,
     runTransaction,
-    DEVNET_PROVIDER,
-    TransactionContext
+    TransactionContext, getProvider
 } from "./Helper";
+import {Network} from "aptos";
 
-export const MODULE_ADDRESS = "0xeb36546237930294a8a9fec1e5d42d9633e9e9355eec3fa80f2610a29d95e152";
-export const DEFAULT_FEE_SCHEDULE = "0x96e6143a72d9cb40872972c241112ecb43cc0ca8aca376a940a182d620ccef1c";
-export const MARKETPLACE_HELPER = new Helper(DEVNET_PROVIDER, MODULE_ADDRESS);
+export const MODULE_ADDRESS = "0x6de37368e31dff4580b211295198159ee6f98b42ffa93c5683bb955ca1be67e0";
+export const DEVNET_FEE_SCHEDULE = "0x96e6143a72d9cb40872972c241112ecb43cc0ca8aca376a940a182d620ccef1c";
+export const TESTNET_FEE_SCHEDULE = "0xc261491e35296ffbb760715c2bb83b87ced70029e82e100ff53648b2f9e1a598";
+export const MAINNET_ZERO_FEE_SCHEDULE = "0x8bff03d355bb35d2293ae5be7b04b9648be2f3694fb3fc537267ecb563743e00";
 export const DEFAULT_COLLECTION = "Test Collection";
 export const DEFAULT_TOKEN_NAME = "Test Token #1";
 export const DEFAULT_PROPERTY_VERSION = 0;
@@ -27,10 +28,23 @@ const AUCTION = "Auction";
 const TOKEN_OFFERS = "Token Offers";
 const COLLECTION_OFFERS = "Collection Offers";
 
+const defaultFeeSchedule = (network: Network) => {
+    if (network === Network.MAINNET) {
+        return MAINNET_ZERO_FEE_SCHEDULE;
+    } else if (network === Network.TESTNET) {
+        return TESTNET_FEE_SCHEDULE;
+    } else if (network === Network.DEVNET) {
+        return DEVNET_FEE_SCHEDULE;
+    } else {
+        throw new Error("Unsupported network");
+    }
+}
+
 function Marketplace(props: TransactionContext) {
+    const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
     const [tokenStandard, setTokenStandard] = useState<string>(V2);
     const [type, setType] = useState<string>(FIXED_PRICE);
-    const [feeSchedule, setFeeSchedule] = useState<string>(DEFAULT_FEE_SCHEDULE);
+    const [feeSchedule, setFeeSchedule] = useState<string>(defaultFeeSchedule(props.network));
     const [feeScheduleDetails, setFeeScheduleDetails] = useState<{
         error: string | null,
         fee_address: string,
@@ -77,9 +91,9 @@ function Marketplace(props: TransactionContext) {
         // Ensure you're logged in
         if (!props.account) return [];
 
-        const payload = await MARKETPLACE_HELPER.initFeeSchedule(props.account.address, BigInt(50), BigInt(125), BigInt(100), BigInt(2));
+        const payload = await MARKETPLACE_HELPER.initFeeSchedule(props.account.address, BigInt(0), BigInt(0), BigInt(100), BigInt(0));
 
-        let txn = await runTransaction(props.submitTransaction, payload);
+        let txn = await runTransaction(props, payload);
         if (txn !== undefined) {
             let address = "unknown";
             for (let change of txn.changes) {
@@ -115,7 +129,7 @@ function Marketplace(props: TransactionContext) {
                         }}
                         placeholder="Fee schedule address"
                         size="large"
-                        defaultValue={DEFAULT_FEE_SCHEDULE}
+                        defaultValue={defaultFeeSchedule(props.network)}
                     />
                     <Button
                         onClick={() => loadFeeSchedule()}
@@ -192,39 +206,52 @@ function Marketplace(props: TransactionContext) {
                         </Col>
                     </Row>
                     {tokenStandard === V1 && type === FIXED_PRICE &&
-                        <V1FixedListing account={props.account} submitTransaction={props.submitTransaction}/>}
+                        <V1FixedListing network={props.network} account={props.account}
+                                        submitTransaction={props.submitTransaction}/>}
                     {tokenStandard === V1 && type === AUCTION &&
-                        <V1AuctionListing account={props.account} submitTransaction={props.submitTransaction}/>}
+                        <V1AuctionListing network={props.network} account={props.account}
+                                          submitTransaction={props.submitTransaction}/>}
                     {tokenStandard === V1 && type === TOKEN_OFFERS && <Alert type="error" message="Not implemented"/>}
                     {tokenStandard === V1 && type === COLLECTION_OFFERS &&
                         <Alert type="error" message="Not implemented"/>}
                     {tokenStandard === V2 && type === FIXED_PRICE &&
-                        <V2FixedListing account={props.account} submitTransaction={props.submitTransaction}/>}
+                        <V2FixedListing network={props.network} account={props.account}
+                                        submitTransaction={props.submitTransaction}/>}
                     {tokenStandard === V2 && type === AUCTION &&
-                        <V2AuctionListing account={props.account} submitTransaction={props.submitTransaction}/>}
+                        <V2AuctionListing network={props.network} account={props.account}
+                                          submitTransaction={props.submitTransaction}/>}
                     {tokenStandard === V2 && type === TOKEN_OFFERS &&
-                        <V2TokenOffers account={props.account} submitTransaction={props.submitTransaction}/>}
+                        <V2TokenOffers network={props.network} account={props.account}
+                                       submitTransaction={props.submitTransaction}/>}
                     {tokenStandard === V2 && type === COLLECTION_OFFERS &&
-                        <V2CollectionOffers account={props.account} submitTransaction={props.submitTransaction}/>}
+                        <V2CollectionOffers network={props.network} account={props.account}
+                                            submitTransaction={props.submitTransaction}/>}
                     <Row align="middle">
                         <Col>
                             <h2>Interacting with Listings</h2>
                         </Col>
                     </Row>
-                    {type === FIXED_PRICE && <FixedPriceListingManagement account={props.account}
-                                                                          submitTransaction={props.submitTransaction}/>}
+                    {type === FIXED_PRICE &&
+                        <FixedPriceListingManagement network={props.network} account={props.account}
+                                                     submitTransaction={props.submitTransaction}/>}
                     {type === AUCTION &&
-                        <AuctionListingManagement account={props.account} submitTransaction={props.submitTransaction}/>}
+                        <AuctionListingManagement network={props.network} account={props.account}
+                                                  submitTransaction={props.submitTransaction}/>}
                     {tokenStandard === V1 &&
-                        <ExtractTokenV1 account={props.account} submitTransaction={props.submitTransaction}/>}
+                        <ExtractTokenV1 network={props.network} account={props.account}
+                                        submitTransaction={props.submitTransaction}/>}
                     {(type === FIXED_PRICE) &&
-                        <Listings account={props.account} submitTransaction={props.submitTransaction}/>}
+                        <Listings network={props.network} account={props.account}
+                                  submitTransaction={props.submitTransaction}/>}
                     {(type === AUCTION) &&
-                        <AuctionListings account={props.account} submitTransaction={props.submitTransaction}/>}
+                        <AuctionListings network={props.network} account={props.account}
+                                         submitTransaction={props.submitTransaction}/>}
                     {type === TOKEN_OFFERS &&
-                        <TokenOffers account={props.account} submitTransaction={props.submitTransaction}/>}
+                        <TokenOffers network={props.network} account={props.account}
+                                     submitTransaction={props.submitTransaction}/>}
                     {type === COLLECTION_OFFERS &&
-                        <CollectionOffers account={props.account} submitTransaction={props.submitTransaction}/>}
+                        <CollectionOffers network={props.network} account={props.account}
+                                          submitTransaction={props.submitTransaction}/>}
                 </Col>
             </Row>
         </>
@@ -232,6 +259,7 @@ function Marketplace(props: TransactionContext) {
 }
 
 function V1FixedListing(props: TransactionContext) {
+    const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
     const [message, setMessage] = useState<String>("");
     const [collectionName, setCollectionName] = useState<string>(DEFAULT_COLLECTION);
     const [tokenName, setTokenName] = useState<string>(DEFAULT_TOKEN_NAME);
@@ -239,7 +267,7 @@ function V1FixedListing(props: TransactionContext) {
     const [creatorAddress, setCreatorAddress] = useState<string>("");
     const [tokenPropertyVersion, setTokenPropertyVersion] = useState<number>(0);
 
-    const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>(DEFAULT_FEE_SCHEDULE);
+    const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>(defaultFeeSchedule(props.network));
     const [listingPrice, setListingPrice] = useState<string>(DEFAULT_PRICE);
 
     const createV1Listing = async () => {
@@ -256,7 +284,7 @@ function V1FixedListing(props: TransactionContext) {
                 BigInt(listingPrice)
             );
 
-        let txn = await runTransaction(props.submitTransaction, payload);
+        let txn = await runTransaction(props, payload);
         if (txn !== undefined) {
             let address = "unknown";
             for (let event of txn.events) {
@@ -349,7 +377,7 @@ function V1FixedListing(props: TransactionContext) {
                         }}
                         placeholder="Fee Schedule Address"
                         size="large"
-                        defaultValue={DEFAULT_FEE_SCHEDULE}
+                        defaultValue={defaultFeeSchedule(props.network)}
                     />
                 </Col>
             </Row>
@@ -392,6 +420,7 @@ function V1FixedListing(props: TransactionContext) {
 }
 
 function V1AuctionListing(props: TransactionContext) {
+    const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
     const [message, setMessage] = useState<String>("");
     const [collectionName, setCollectionName] = useState<string>(DEFAULT_COLLECTION);
     const [tokenName, setTokenName] = useState<string>(DEFAULT_TOKEN_NAME);
@@ -400,7 +429,7 @@ function V1AuctionListing(props: TransactionContext) {
     const [tokenPropertyVersion, setTokenPropertyVersion] = useState<number>(0);
     const [auctionDuration, setAuctionDuration] = useState<number>(3600);
 
-    const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>(DEFAULT_FEE_SCHEDULE);
+    const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>(defaultFeeSchedule(props.network));
     const [listingPrice, setListingPrice] = useState<string>(DEFAULT_PRICE);
 
     const createV1AuctionListing = async () => {
@@ -423,7 +452,7 @@ function V1AuctionListing(props: TransactionContext) {
             BigInt(DEFAULT_PRICE)
         );
 
-        let txn = await runTransaction(props.submitTransaction, payload);
+        let txn = await runTransaction(props, payload);
         if (txn !== undefined) {
             let address = "unknown";
             for (let event of txn.events) {
@@ -516,7 +545,7 @@ function V1AuctionListing(props: TransactionContext) {
                         }}
                         placeholder="Fee Schedule Address"
                         size="large"
-                        defaultValue={DEFAULT_FEE_SCHEDULE}
+                        defaultValue={defaultFeeSchedule(props.network)}
                     />
                 </Col>
             </Row>
@@ -575,10 +604,11 @@ function V1AuctionListing(props: TransactionContext) {
 
 
 function V2FixedListing(props: TransactionContext) {
+    const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
     const [message, setMessage] = useState<String>("");
     const [tokenAddress, setTokenAddress] = useState<string>("");
 
-    const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>(DEFAULT_FEE_SCHEDULE);
+    const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>(defaultFeeSchedule(props.network));
     const [listingPrice, setListingPrice] = useState<string>(DEFAULT_PRICE);
 
     const createV2Listing = async () => {
@@ -591,7 +621,7 @@ function V2FixedListing(props: TransactionContext) {
             BigInt(listingPrice)
         );
 
-        let txn = await runTransaction(props.submitTransaction, payload);
+        let txn = await runTransaction(props, payload);
         if (txn !== undefined) {
             let address = "unknown";
             for (let event of txn.events) {
@@ -639,7 +669,7 @@ function V2FixedListing(props: TransactionContext) {
                         }}
                         placeholder="Fee Schedule Address"
                         size="large"
-                        defaultValue={DEFAULT_FEE_SCHEDULE}
+                        defaultValue={defaultFeeSchedule(props.network)}
                     />
                 </Col>
             </Row>
@@ -682,11 +712,12 @@ function V2FixedListing(props: TransactionContext) {
 }
 
 function V2AuctionListing(props: TransactionContext) {
+    const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
     const [message, setMessage] = useState<String>("");
     const [tokenAddress, setTokenAddress] = useState<string>("");
     const [auctionDuration, setAuctionDuration] = useState<number>(3600);
 
-    const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>(DEFAULT_FEE_SCHEDULE);
+    const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>(defaultFeeSchedule(props.network));
     const [listingPrice, setListingPrice] = useState<string>(DEFAULT_PRICE);
 
     const createV2AuctionListing = async () => {
@@ -706,7 +737,7 @@ function V2AuctionListing(props: TransactionContext) {
             BigInt(DEFAULT_PRICE)
         );
 
-        let txn = await runTransaction(props.submitTransaction, payload);
+        let txn = await runTransaction(props, payload);
         if (txn !== undefined) {
             let address = "unknown";
             for (let event of txn.events) {
@@ -754,7 +785,7 @@ function V2AuctionListing(props: TransactionContext) {
                         }}
                         placeholder="Fee Schedule Address"
                         size="large"
-                        defaultValue={DEFAULT_FEE_SCHEDULE}
+                        defaultValue={defaultFeeSchedule(props.network)}
                     />
                 </Col>
             </Row>
@@ -812,20 +843,21 @@ function V2AuctionListing(props: TransactionContext) {
 }
 
 function FixedPriceListingManagement(props: TransactionContext) {
+    const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
     const [listingAddress, setListingAddress] = useState<string>("");
 
     const cancelListing = async () => {
         // Ensure you're logged in
         if (!props.account || !listingAddress) return [];
         const payload = await MARKETPLACE_HELPER.endFixedPriceListing(listingAddress);
-        await runTransaction(props.submitTransaction, payload);
+        await runTransaction(props, payload);
     }
 
     const purchaseListing = async () => {
         // Ensure you're logged in
         if (!props.account || !listingAddress) return [];
         const payload = await MARKETPLACE_HELPER.purchaseListing(listingAddress);
-        await runTransaction(props.submitTransaction, payload);
+        await runTransaction(props, payload);
     }
 
     return (
@@ -874,6 +906,7 @@ function FixedPriceListingManagement(props: TransactionContext) {
 }
 
 function AuctionListingManagement(props: TransactionContext) {
+    const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
     const [listingAddress, setListingAddress] = useState<string>("");
     const [bidAmount, setBidAmount] = useState<bigint>(BigInt(0));
 
@@ -881,21 +914,21 @@ function AuctionListingManagement(props: TransactionContext) {
         // Ensure you're logged in
         if (!props.account || !listingAddress) return [];
         const payload = await MARKETPLACE_HELPER.completeAuctionListing(listingAddress);
-        await runTransaction(props.submitTransaction, payload);
+        await runTransaction(props, payload);
     }
 
     const bidAuction = async () => {
         // Ensure you're logged in
         if (!props.account || !listingAddress) return [];
         const payload = await MARKETPLACE_HELPER.bidAuctionListing(props.account.address, listingAddress, bidAmount);
-        await runTransaction(props.submitTransaction, payload);
+        await runTransaction(props, payload);
     }
 
     const buyNowAuction = async () => {
         // Ensure you're logged in
         if (!props.account || !listingAddress) return [];
         const payload = await MARKETPLACE_HELPER.purchaseListing(listingAddress);
-        await runTransaction(props.submitTransaction, payload);
+        await runTransaction(props, payload);
     }
 
     return (
@@ -970,6 +1003,7 @@ function AuctionListingManagement(props: TransactionContext) {
 
 
 function ExtractTokenV1(props: TransactionContext) {
+    const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
     const [objectAddress, setObjectAddress] = useState<string>("");
 
 
@@ -977,7 +1011,7 @@ function ExtractTokenV1(props: TransactionContext) {
         // Ensure you're logged in
         if (!props.account || !objectAddress) return [];
         const payload = await MARKETPLACE_HELPER.extract_tokenv1(objectAddress);
-        await runTransaction(props.submitTransaction, payload);
+        await runTransaction(props, payload);
     }
 
     return (
@@ -1017,6 +1051,7 @@ function ExtractTokenV1(props: TransactionContext) {
 }
 
 function Listings(props: TransactionContext) {
+    const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
     const [listings, setListings] = useState<{
         collection_id: string,
         token_data_id: string,
@@ -1070,14 +1105,14 @@ function Listings(props: TransactionContext) {
         // Ensure you're logged in
         if (!props.account) return [];
         const payload = await MARKETPLACE_HELPER.endFixedPriceListing(listingAddress);
-        await runTransaction(props.submitTransaction, payload);
+        await runTransaction(props, payload);
     }
 
     const purchaseListing = async (listingAddress: string) => {
         // Ensure you're logged in
         if (!props.account) return [];
         const payload = await MARKETPLACE_HELPER.purchaseListing(listingAddress);
-        await runTransaction(props.submitTransaction, payload);
+        await runTransaction(props, payload);
     }
 
     return (
@@ -1149,6 +1184,7 @@ function Listings(props: TransactionContext) {
 
 
 function AuctionListings(props: TransactionContext) {
+    const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
     const [listings, setListings] = useState<{
         collection_id: string,
         token_data_id: string,
@@ -1202,14 +1238,14 @@ function AuctionListings(props: TransactionContext) {
         // Ensure you're logged in
         if (!props.account) return [];
         const payload = await MARKETPLACE_HELPER.endFixedPriceListing(listingAddress);
-        await runTransaction(props.submitTransaction, payload);
+        await runTransaction(props, payload);
     }
 
     const purchaseListing = async (listingAddress: string) => {
         // Ensure you're logged in
         if (!props.account) return [];
         const payload = await MARKETPLACE_HELPER.purchaseListing(listingAddress);
-        await runTransaction(props.submitTransaction, payload);
+        await runTransaction(props, payload);
     }
 
     return (
@@ -1280,8 +1316,9 @@ function AuctionListings(props: TransactionContext) {
 }
 
 function V2TokenOffers(props: TransactionContext) {
+    const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
     const [tokenAddress, setTokenAddress] = useState<string>("");
-    const [feeSchedule, setFeeSchedule] = useState<string>(DEFAULT_FEE_SCHEDULE);
+    const [feeSchedule, setFeeSchedule] = useState<string>(defaultFeeSchedule(props.network));
     const [price, setPrice] = useState<bigint>(BigInt(DEFAULT_PRICE));
     const [expirationSecs, setExpirationSecs] = useState<bigint>(BigInt(3600));
 
@@ -1290,7 +1327,7 @@ function V2TokenOffers(props: TransactionContext) {
         if (!props.account || !tokenAddress) return [];
         const expiration_time = BigInt(Math.floor(new Date().getTime() / 1000)) + expirationSecs;
         const payload = await MARKETPLACE_HELPER.initTokenOfferForTokenv2(tokenAddress, feeSchedule, price, expiration_time);
-        await runTransaction(props.submitTransaction, payload);
+        await runTransaction(props, payload);
     }
 
     return (
@@ -1310,7 +1347,7 @@ function V2TokenOffers(props: TransactionContext) {
                         style={{width: "calc(100% - 60px)"}}
                         placeholder="FeeSchedule"
                         size="large"
-                        defaultValue={DEFAULT_FEE_SCHEDULE}
+                        defaultValue={defaultFeeSchedule(props.network)}
                     />
                 </Col>
             </Row>
@@ -1378,8 +1415,9 @@ function V2TokenOffers(props: TransactionContext) {
 }
 
 function V2CollectionOffers(props: TransactionContext) {
+    const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
     const [collectionAddress, setCollectionAddress] = useState<string>("");
-    const [feeSchedule, setFeeSchedule] = useState<string>(DEFAULT_FEE_SCHEDULE);
+    const [feeSchedule, setFeeSchedule] = useState<string>(defaultFeeSchedule(props.network));
     const [price, setPrice] = useState<bigint>(BigInt(DEFAULT_PRICE));
     const [amount, setAmount] = useState<bigint>(BigInt(1));
     const [expirationSecs, setExpirationSecs] = useState<bigint>(BigInt(3600));
@@ -1389,7 +1427,7 @@ function V2CollectionOffers(props: TransactionContext) {
         if (!props.account || !collectionAddress) return [];
         const expiration_time = BigInt(Math.floor(new Date().getTime() / 1000)) + expirationSecs;
         const payload = await MARKETPLACE_HELPER.initCollectionOfferForTokenv2(collectionAddress, feeSchedule, price, amount, expiration_time);
-        await runTransaction(props.submitTransaction, payload);
+        await runTransaction(props, payload);
     }
 
     return (
@@ -1409,7 +1447,7 @@ function V2CollectionOffers(props: TransactionContext) {
                         style={{width: "calc(100% - 60px)"}}
                         placeholder="FeeSchedule"
                         size="large"
-                        defaultValue={DEFAULT_FEE_SCHEDULE}
+                        defaultValue={defaultFeeSchedule(props.network)}
                     />
                 </Col>
             </Row>
@@ -1493,6 +1531,7 @@ function V2CollectionOffers(props: TransactionContext) {
 }
 
 function TokenOffers(props: TransactionContext) {
+    const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
     const [tokenOffers, setTokenOffers] = useState<any>("");
     const [tokenAddress, setTokenAddress] = useState<string>("");
 
@@ -1543,6 +1582,7 @@ function TokenOffers(props: TransactionContext) {
 }
 
 function CollectionOffers(props: TransactionContext) {
+    const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
     const [collectionOffers, setCollectionOffers] = useState<{
         buyer: string,
         collection_id: string,
@@ -1565,14 +1605,14 @@ function CollectionOffers(props: TransactionContext) {
         // Ensure you're logged in
         if (!props.account || !offerAddress) return [];
         const payload = await MARKETPLACE_HELPER.fillCollectionOfferForTokenv2(offerAddress, tokenAddress);
-        await runTransaction(props.submitTransaction, payload);
+        await runTransaction(props, payload);
     }
 
     const cancelCollectionOffer = async (offerAddress: string) => {
         // Ensure you're logged in
         if (!props.account || !offerAddress) return [];
         const payload = await MARKETPLACE_HELPER.cancelCollectionOffer(offerAddress);
-        await runTransaction(props.submitTransaction, payload);
+        await runTransaction(props, payload);
     }
 
     return (

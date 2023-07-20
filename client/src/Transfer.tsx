@@ -16,7 +16,7 @@ function Transfer(props: TransactionContext) {
             type_arguments: ["0x1::object::ObjectCore"],
             arguments: [objectAddress, destinationAddress],
         };
-        await runTransaction(props.submitTransaction, payload);
+        await runTransaction(props, payload);
     }
 
     return (

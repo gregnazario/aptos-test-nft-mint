@@ -30,7 +30,7 @@ function Launchpad(props: TransactionContext) {
             ],
         };
 
-        await runTransaction(props.submitTransaction, payload);
+        await runTransaction(props, payload);
     }
 
     const createV1Token = async () => {
@@ -56,7 +56,7 @@ function Launchpad(props: TransactionContext) {
                 [], // Property types
             ],
         };
-        await runTransaction(props.submitTransaction, payload);
+        await runTransaction(props, payload);
     }
 
     const createV2Collection = async () => {
@@ -85,7 +85,7 @@ function Launchpad(props: TransactionContext) {
             ],
         };
 
-        await runTransaction(props.submitTransaction, payload);
+        await runTransaction(props, payload);
     }
 
     const createV2Token = async () => {
@@ -105,7 +105,7 @@ function Launchpad(props: TransactionContext) {
                 []
             ],
         };
-        await runTransaction(props.submitTransaction, payload);
+        await runTransaction(props, payload);
     }
 
     const createSoulboundV2Token = async () => {
@@ -126,7 +126,7 @@ function Launchpad(props: TransactionContext) {
                 props.account.address
             ],
         };
-        await runTransaction(props.submitTransaction, payload);
+        await runTransaction(props, payload);
     }
 
     return (

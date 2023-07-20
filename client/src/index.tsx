@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
@@ -16,12 +16,24 @@ import {TrustWallet} from "@trustwallet/aptos-wallet-adapter";
 import {MSafeWalletAdapter} from "msafe-plugin-wallet-adapter";
 import {WelldoneWallet} from "@welldone-studio/aptos-wallet-adapter";
 
-import {
-    AptosWalletAdapterProvider, NetworkName,
-} from "@aptos-labs/wallet-adapter-react";
+import {AptosWalletAdapterProvider, NetworkName,} from "@aptos-labs/wallet-adapter-react";
+import {Select} from "antd";
+import {Network} from "aptos";
 
 
-const wallets = [
+const DEVNET_WALLETS = [
+    new FewchaWallet(),
+    new MartianWallet(),
+    new MSafeWalletAdapter(),
+    new NightlyWallet(),
+    new OpenBlockWallet(),
+    new PetraWallet(),
+    new PontemWallet(),
+    new RiseWallet(),
+    new TokenPocketWallet(),
+    new TrustWallet(),
+    new WelldoneWallet()];
+const TESTNET_WALLETS = [
     new BloctoWallet({
         network: NetworkName.Testnet,
         bloctoAppId: "6d85f56e-5f2e-46cd-b5f2-5cf9695b4d46",
@@ -37,16 +49,61 @@ const wallets = [
     new TokenPocketWallet(),
     new TrustWallet(),
     new WelldoneWallet()];
+const MAINNET_WALLETS = [
+    new BloctoWallet({
+        network: NetworkName.Mainnet,
+        bloctoAppId: "6d85f56e-5f2e-46cd-b5f2-5cf9695b4d46",
+    }),
+    new FewchaWallet(),
+    new MartianWallet(),
+    new MSafeWalletAdapter(),
+    new NightlyWallet(),
+    new OpenBlockWallet(),
+    new PetraWallet(),
+    new PontemWallet(),
+    new RiseWallet(),
+    new TokenPocketWallet(),
+    new TrustWallet(),
+    new WelldoneWallet()];
 const root = ReactDOM.createRoot(
-  document.getElementById('root') as HTMLElement
+    document.getElementById('root') as HTMLElement
 );
 root.render(
-  <React.StrictMode>
-      <AptosWalletAdapterProvider plugins={wallets} autoConnect={true}>
-          <App />
-      </AptosWalletAdapterProvider>
-  </React.StrictMode>
+    <React.StrictMode>
+        <Selector/>
+    </React.StrictMode>
 );
+
+
+function Selector(this: any) {
+    const [network, setNetwork] = useState<Network>(Network.TESTNET);
+
+    return <>
+        <Select
+            defaultValue={Network.TESTNET}
+            style={{width: 120}}
+            onChange={setNetwork}
+            options={[
+                {value: Network.DEVNET, label: "Devnet"},
+                {value: Network.TESTNET, label: "Testnet"},
+                {value: Network.MAINNET, label: "Mainnet"},
+            ]}
+        />
+
+        {network === Network.DEVNET &&
+            <AptosWalletAdapterProvider plugins={DEVNET_WALLETS} autoConnect={true}>
+                <App expectedNetwork={network}/>
+            </AptosWalletAdapterProvider>}
+        {network === Network.TESTNET &&
+            <AptosWalletAdapterProvider plugins={TESTNET_WALLETS} autoConnect={true}>
+                <App expectedNetwork={network}/>
+            </AptosWalletAdapterProvider>}
+        {network === Network.MAINNET &&
+            <AptosWalletAdapterProvider plugins={MAINNET_WALLETS} autoConnect={true}>
+                <App expectedNetwork={network}/>
+            </AptosWalletAdapterProvider>}
+    </>
+}
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))
