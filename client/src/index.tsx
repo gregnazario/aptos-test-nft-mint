@@ -19,6 +19,7 @@ import {WelldoneWallet} from "@welldone-studio/aptos-wallet-adapter";
 import {AptosWalletAdapterProvider, NetworkName,} from "@aptos-labs/wallet-adapter-react";
 import {Select} from "antd";
 import {Network} from "aptos";
+import {createBrowserHistory} from "history";
 
 
 const DEVNET_WALLETS = [
@@ -74,15 +75,30 @@ root.render(
     </React.StrictMode>
 );
 
+const getNetwork = (input: string | null) => {
+    if (input?.toLowerCase() === "devnet") {
+        return Network.DEVNET;
+    } else if (input?.toLowerCase() === "testnet") {
+        return Network.TESTNET;
+    } else if (input?.toLowerCase() === "mainnet") {
+        return Network.MAINNET;
+    } else {
+        return undefined;
+    }
+}
 
 function Selector(this: any) {
-    const [network, setNetwork] = useState<Network>(Network.TESTNET);
+    const [network, setNetwork] = useState<string>(getNetwork(new URLSearchParams(window.location.search).get("network")) ?? Network.TESTNET);
+    const browserHistory = createBrowserHistory();
 
     return <>
         <Select
-            defaultValue={Network.TESTNET}
+            defaultValue={network}
             style={{width: 120}}
-            onChange={setNetwork}
+            onChange={(input) => {
+                setNetwork(input);
+                browserHistory.push(`?network=${input}`);
+            }}
             options={[
                 {value: Network.DEVNET, label: "Devnet"},
                 {value: Network.TESTNET, label: "Testnet"},
