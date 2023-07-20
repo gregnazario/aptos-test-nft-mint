@@ -12,7 +12,7 @@ import {
 import {Network} from "aptos";
 
 export const MODULE_ADDRESS = "0x6de37368e31dff4580b211295198159ee6f98b42ffa93c5683bb955ca1be67e0";
-export const DEVNET_FEE_SCHEDULE = "0x6259033cffdf05d15615f05ab689845d94a58db67a18903765601a8707d2e258";
+export const DEVNET_FEE_SCHEDULE = "0x96e6143a72d9cb40872972c241112ecb43cc0ca8aca376a940a182d620ccef1c";
 export const TESTNET_FEE_SCHEDULE = "0xc261491e35296ffbb760715c2bb83b87ced70029e82e100ff53648b2f9e1a598";
 export const MAINNET_ZERO_FEE_SCHEDULE = "0x8bff03d355bb35d2293ae5be7b04b9648be2f3694fb3fc537267ecb563743e00";
 export const DEFAULT_COLLECTION = "Test Collection";
@@ -1082,15 +1082,12 @@ function Listings(props: TransactionContext) {
             let listings = (await MARKETPLACE_HELPER.getV2Listings(MODULE_ADDRESS, "example_v2_marketplace", false));
             let parsed = [];
             for (const listing of listings) {
-                // TODO: Use a real join
-                let token_data = await getProvider(props.network).getTokenData(listing.token_data_id, {tokenStandard: "v2"});
-
                 parsed.push(
                     {
-                        collection_id: token_data.current_token_datas_v2[0].current_collection?.collection_id?? "",
-                        token_data_id: listing.token_data_id,
-                        token_name: token_data.current_token_datas_v2[0].token_name,
-                        token_uri: token_data.current_token_datas_v2[0].token_uri,
+                        collection_id: listing.current_token_data.collection_id,
+                        token_data_id: listing.current_token_data.token_data_id,
+                        token_name: listing.current_token_data.token_name,
+                        token_uri: listing.current_token_data?.token_uri,
                         price: listing.price,
                         listing_id: listing.listing_id,
                         is_deleted: listing.is_deleted,
