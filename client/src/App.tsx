@@ -9,7 +9,7 @@ import Marketplace from './Marketplace';
 import Transfer from './Transfer';
 import {getProvider} from "./Helper";
 
-function App(props: {expectedNetwork: Network}) {
+function App(props: { expectedNetwork: Network }) {
     // TODO Consolidate a lot of these
     const [wallet, setWallet] = useState<{
         name: string,
@@ -44,7 +44,12 @@ function App(props: {expectedNetwork: Network}) {
 
         try {
             // TODO: Add pagination
-            let tokens_query = await getProvider(props.expectedNetwork).indexerClient.getOwnedTokens(walletContextState.account.address, {options:{offset: 0, limit: 10}});
+            let tokens_query = await getProvider(props.expectedNetwork).indexerClient.getOwnedTokens(walletContextState.account.address, {
+                options: {
+                    offset: 0,
+                    limit: 10
+                }
+            });
 
             let tokens = tokens_query.current_token_ownerships_v2.map(token_data => {
                 if (token_data.token_standard === "v2") {
@@ -116,7 +121,7 @@ function App(props: {expectedNetwork: Network}) {
             <Layout>
                 <Row align="middle">
                     <Col span={10} offset={2}>
-                        <h1>NFT Test Marketplace ({walletContextState.network?.name})</h1>
+                        <h1>NFT Test Marketplace ({props.expectedNetwork})</h1>
                     </Col>
                     <Col span={12} style={{textAlign: "right", paddingRight: "200px"}}>
                         <WalletSelector/>
@@ -129,8 +134,9 @@ function App(props: {expectedNetwork: Network}) {
             }
             {
                 walletContextState.connected && !isSelectedNetwork() &&
-                <Alert message={`Wallet is connected to ${walletContextState.network?.name}.  Please connect to ${props.expectedNetwork}`}
-                       type="warning"/>
+                <Alert
+                    message={`Wallet is connected to ${walletContextState.network?.name}.  Please connect to ${props.expectedNetwork}`}
+                    type="warning"/>
             }
             {
                 walletContextState.connected && isSelectedNetwork() &&
