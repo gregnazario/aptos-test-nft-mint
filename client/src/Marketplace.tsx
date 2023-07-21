@@ -177,8 +177,6 @@ function Marketplace(props: TransactionContext) {
                 <Col flex={"auto"}>
                     <Row align="middle">
                         <h1>NFT Marketplace</h1>
-                        <p>This acts as a marketplace. You must know the listings, no fancy UI will
-                            be provided to find listings</p>
                     </Row>
                     <Row>
                         <Col>
