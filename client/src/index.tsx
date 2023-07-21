@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
@@ -88,8 +88,14 @@ const getNetwork = (input: string | null) => {
 }
 
 function Selector(this: any) {
-    const [network, setNetwork] = useState<string>(getNetwork(new URLSearchParams(window.location.search).get("network")) ?? Network.TESTNET);
+    const [network, setNetwork] = useState<Network>(getNetwork(new URLSearchParams(window.location.search).get("network")) ?? Network.MAINNET);
     const browserHistory = createBrowserHistory();
+
+    useEffect(() => {
+        if (!getNetwork(new URLSearchParams(window.location.search).get("network"))) {
+            browserHistory.push(`?network=${Network.MAINNET}`);
+        }
+    });
 
     return <>
         <Select

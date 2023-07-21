@@ -1,7 +1,7 @@
 import {Alert, Button, Col, Image, Input, Row, Select, Tooltip} from "antd";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
 import {useEffect, useState} from "react";
-import {Marketplace as Helper, TokenOffer, V2Listing} from "./MarketplaceHelper"
+import {Listing, Marketplace as Helper, TokenOffer} from "./MarketplaceHelper"
 import {
     onStringChange,
     onNumberChange,
@@ -44,6 +44,7 @@ const defaultFeeSchedule = (network: Network) => {
 function Marketplace(props: TransactionContext) {
     const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
     const [tokenStandard, setTokenStandard] = useState<string>(V2);
+    const [refresh, setRefresh] = useState<number>(0);
     const [type, setType] = useState<string>(FIXED_PRICE);
     const [feeSchedule, setFeeSchedule] = useState<string>(defaultFeeSchedule(props.network));
     const [feeScheduleDetails, setFeeScheduleDetails] = useState<{
@@ -58,6 +59,10 @@ function Marketplace(props: TransactionContext) {
         loadFeeSchedule()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [props.account])
+
+    const refreshPage = () => {
+        setRefresh(refresh + 1);
+    }
 
     const loadFeeSchedule = async () => {
         // Ensure you're logged in
@@ -85,7 +90,7 @@ function Marketplace(props: TransactionContext) {
                 commission: ""
             })
         }
-
+        refreshPage();
     }
 
     const createFeeSchedule = async () => {
@@ -235,9 +240,6 @@ function Marketplace(props: TransactionContext) {
                             <h2>Interacting with Listings</h2>
                         </Col>
                     </Row>
-                    {type === FIXED_PRICE &&
-                        <FixedPriceListingManagement network={props.network} account={props.account}
-                                                     submitTransaction={props.submitTransaction}/>}
                     {type === AUCTION &&
                         <AuctionListingManagement network={props.network} account={props.account}
                                                   submitTransaction={props.submitTransaction}/>}
@@ -247,8 +249,8 @@ function Marketplace(props: TransactionContext) {
                     {(type === FIXED_PRICE) &&
                         <Listings ctx={{
                             network: props.network, account: props.account,
-                            submitTransaction: props.submitTransaction
-                        }} tokenStandard={tokenStandard}/>}
+                            submitTransaction: props.submitTransaction,
+                        }} feeSchedule={feeSchedule} refresh={refresh}/>}
                     {(type === AUCTION) &&
                         <AuctionListings network={props.network} account={props.account}
                                          submitTransaction={props.submitTransaction}/>}
@@ -848,69 +850,6 @@ function V2AuctionListing(props: TransactionContext) {
     );
 }
 
-function FixedPriceListingManagement(props: TransactionContext) {
-    const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
-    const [listingAddress, setListingAddress] = useState<string>("");
-
-    const cancelListing = async () => {
-        // Ensure you're logged in
-        if (!props.account || !listingAddress) return [];
-        const payload = await MARKETPLACE_HELPER.endFixedPriceListing(listingAddress);
-        await runTransaction(props, payload);
-    }
-
-    const purchaseListing = async () => {
-        // Ensure you're logged in
-        if (!props.account || !listingAddress) return [];
-        const payload = await MARKETPLACE_HELPER.purchaseListing(listingAddress);
-        await runTransaction(props, payload);
-    }
-
-    return (
-        <>
-            <Row align="middle">
-                <h3>Purchasing / Canceling Fixed Price Listing</h3>
-            </Row>
-            <Row align="middle">
-                <Col span={4}>
-                    <p>Listing address: </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onStringChange(event, setListingAddress)
-                        }}
-                        style={{width: "calc(100% - 60px)"}}
-                        placeholder="Listing Address"
-                        size="large"
-                        defaultValue={""}
-                    />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={2} offset={4}>
-                    <Button
-                        onClick={() => purchaseListing()}
-                        type="primary"
-                        style={{height: "40px", backgroundColor: "#3f67ff"}}
-                    >
-                        Buy Listing
-                    </Button>
-                </Col>
-                <Col span={2} offset={2}>
-                    <Button
-                        onClick={() => cancelListing()}
-                        type="primary"
-                        style={{height: "40px", backgroundColor: "#3f67ff"}}
-                    >
-                        Cancel Listing
-                    </Button>
-                </Col>
-            </Row>
-        </>
-    );
-}
-
 function AuctionListingManagement(props: TransactionContext) {
     const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
     const [listingAddress, setListingAddress] = useState<string>("");
@@ -1056,35 +995,26 @@ function ExtractTokenV1(props: TransactionContext) {
     );
 }
 
-function Listings(props: { ctx: TransactionContext, tokenStandard: string }) {
+function Listings(props: { ctx: TransactionContext, feeSchedule: string, refresh: number }) {
     const MARKETPLACE_HELPER = new Helper(getProvider(props.ctx.network), MODULE_ADDRESS);
-    const [listings, setListings] = useState<Array<V2Listing>>();
+    const [listings, setListings] = useState<Array<Listing>>();
     const [listingsError, setListingsError] = useState<string>();
 
     useEffect(() => {
         loadListings()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [props.ctx.account, props.tokenStandard])
+    }, [props.ctx.account, props.feeSchedule, props.refresh])
 
     const loadListings = async () => {
         try {
-            let listings;
-            if (props.tokenStandard === V1) {
-                listings = (await MARKETPLACE_HELPER.getV1Listings(MODULE_ADDRESS, "example_v2_marketplace"));
-                for (let listing of listings) {
-                    listing.token_uri = await ensureImageUri(listing.token_uri);
-                }
-            } else {
-                listings = (await MARKETPLACE_HELPER.getV2Listings(MODULE_ADDRESS, "example_v2_marketplace"));
-                for (let listing of listings) {
-                    listing.token_uri = await ensureImageUri(listing.token_uri);
-                }
+            let listings = (await MARKETPLACE_HELPER.getListings(MODULE_ADDRESS, props.feeSchedule));
+            for (let listing of listings) {
+                listing.token_uri = await ensureImageUri(listing.token_uri);
             }
-            // TODO: load based on fee schedule
             setListingsError("");
             setListings(listings);
         } catch (error: any) {
-            setListingsError(`Failed to load listings ${listings}`);
+            setListingsError(`Failed to load listings ${error}`);
             setListings([]);
         }
     }
@@ -1095,20 +1025,9 @@ function Listings(props: { ctx: TransactionContext, tokenStandard: string }) {
                 <h3>Listings</h3>
             </Row>
             <Row align="middle">
-                <Col span={2} offset={4}>
-                    <Button
-                        onClick={() => loadListings()}
-                        type="primary"
-                        style={{height: "40px", backgroundColor: "#3f67ff"}}
-                    >
-                        Load Listings
-                    </Button>
-                </Col>
-            </Row>
-            <Row align="middle">
                 <Col span={8}>
                     {!listingsError && listings?.map((listing) => {
-                        return <Listing listing={listing} ctx={props.ctx}/>;
+                        return <ListingView listing={listing} ctx={props.ctx}/>;
                     })
                     }
                     {listingsError && <Alert type="error" message={listingsError}/>}
@@ -1118,9 +1037,9 @@ function Listings(props: { ctx: TransactionContext, tokenStandard: string }) {
     );
 }
 
-function Listing(props: {
+function ListingView(props: {
     ctx: TransactionContext,
-    listing: V2Listing
+    listing: Listing
 }) {
     const MARKETPLACE_HELPER = new Helper(getProvider(props.ctx.network), MODULE_ADDRESS);
     const cancelListing = async (listingAddress: string) => {
@@ -1140,7 +1059,7 @@ function Listing(props: {
     return <Row align="middle">
         <Col>
             <Tooltip placement="right"
-                     title={`${props.listing.collection_name} - ${props.listing.token_name}
+                     title={`${props.listing.collection_name} - ${props.listing.token_name} - ${props.listing.token_standard}
                 | Sold
                 by ${props.listing.seller}`}>
                 <Image
@@ -1580,8 +1499,7 @@ function TokenOfferV2(props: { offer: TokenOffer }) {
         <Col>
             <Tooltip placement="right"
                      title={`${props.offer.collection_name} - ${props.offer.token_name}
-                | Offered
-                by ${props.offer.buyer}`}>
+                | Offered ${props.offer.price} by ${props.offer.buyer}`}>
                 <Image
                     width={100}
                     src={props.offer.token_uri}
@@ -1599,7 +1517,7 @@ function CollectionOffers(props: TransactionContext) {
         collection_id: string,
         collection_offer_id: string,
         expiration_time: number,
-        current_collection_data: { collection_name: string },
+        current_collection: { collection_name: string, uri: string },
         item_price: number,
         remaining_token_amount: number,
     }[]>();
@@ -1679,7 +1597,7 @@ function CollectionOffers(props: TransactionContext) {
                         {collectionOffers?.map((
                             {
                                 buyer,
-                                current_collection_data,
+                                current_collection,
                                 collection_offer_id,
                                 expiration_time,
                                 item_price,
@@ -1690,7 +1608,9 @@ function CollectionOffers(props: TransactionContext) {
                                 <Row align="middle">
                                     <Col>
                                         <Tooltip placement="right" title={``}>
-                                            <b>Offer {collection_offer_id}</b> - {current_collection_data.collection_name} - {item_price / 100000000} APT
+                                            <Image width={100} src={current_collection.uri}
+                                                   alt={current_collection.collection_name}></Image>
+                                            <b>Offer {collection_offer_id}</b> - {current_collection.collection_name} - {item_price / 100000000} APT
                                             | Requested
                                             by {buyer}, expires at {expiration_time}, {remaining_token_amount} offers
                                             remaining
