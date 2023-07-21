@@ -20,49 +20,6 @@ type TransactionPayload = {
     arguments: any[];
 };
 
-type V1ListingsQueryResponse = { nft_marketplace_v2_current_nft_marketplace_listings: V1ListingsResponse };
-export type V1ListingsResponse = Array<{
-    current_token_data: {
-        collection_id: string
-        token_data_id: string
-        token_name: string
-        token_uri: string
-    },
-    price: number,
-    listing_id: string,
-    is_deleted: boolean,
-    token_amount: number,
-    seller: string,
-    marketplace: string,
-    contract_address: string
-}>
-
-export const V1_LISTINGS_ALL_QUERY =
-    `query GetV1Listings($contract_address:String!, $fee_schedule_id: String!) {
-        nft_marketplace_v2_current_nft_marketplace_listings(where: {
-          contract_address: { _eq: $contract_address }
-          fee_schedule_id: { _eq: $fee_schedule_id }
-          is_deleted: { _eq: false }
-          token_standard: {_eq: "v1"}
-        }) {
-          creator_address
-          collection_name
-          contract_address
-          token_name
-          current_token_data {
-          largest_property_version_v1
-            token_uri
-          }
-          property_version
-          price
-          listing_id
-          is_deleted
-          token_amount
-          seller
-          marketplace: marketplace
-        }
-    }`;
-
 type V2ListingsQueryResponse = {
     nft_marketplace_v2_current_nft_marketplace_listings: Array<V2ListingIndexer>
 };
@@ -104,7 +61,7 @@ export const V2_LISTINGS_ALL_QUERY =
         nft_marketplace_v2_current_nft_marketplace_listings(where: {
           contract_address: { _eq: $contract_address }
           marketplace: { _eq: $marketplace }
-          is_deleted: { _eq: $is_deleted }
+          is_deleted: { _eq: false }
           token_standard: {_eq: "v2"}
         }) {
           collection_id

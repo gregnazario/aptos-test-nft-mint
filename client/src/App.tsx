@@ -1,4 +1,4 @@
-import {Alert, Button, Col, Image, Layout, Row, Tooltip} from "antd";
+import {Alert, Col, Image, Layout, Pagination, Row, Tooltip} from "antd";
 import {WalletSelector} from "@aptos-labs/wallet-adapter-ant-design";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
 import {Network} from "aptos";
@@ -9,108 +9,20 @@ import Marketplace from './Marketplace';
 import Transfer from './Transfer';
 import {getProvider} from "./Helper";
 
+type Item = {
+    standard: string,
+    collection: string,
+    collection_id: string,
+    name: string,
+    data_id: string,
+    uri: string,
+    type: string,
+    creator_address: string,
+    property_version: string
+};
+
 function App(props: { expectedNetwork: Network }) {
-    // TODO Consolidate a lot of these
-    const [wallet, setWallet] = useState<{
-        name: string,
-        tokens: {
-            standard: string,
-            collection: string,
-            collection_id: string,
-            name: string,
-            data_id: string,
-            uri: string,
-            type: string,
-            property_version: string,
-            creator_address: string
-        }[]
-    }>();
     const walletContextState = useWallet();
-
-    useEffect(() => {
-        // On load, pull the account's wallet and check that it exists (fund it if it doesn't)
-        if (!walletContextState.account) return;
-
-        loadWalletNfts();
-
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [walletContextState])
-
-    const loadWalletNfts = async () => {
-        // Ensure you're logged in
-        if (!walletContextState.account) {
-            return {name: "Wallet not connected", nfts: []};
-        }
-
-        try {
-            // TODO: Add pagination
-            let tokens_query = await getProvider(props.expectedNetwork).indexerClient.getOwnedTokens(walletContextState.account.address, {
-                options: {
-                    offset: 0,
-                    limit: 10
-                }
-            });
-
-            let tokens = tokens_query.current_token_ownerships_v2.map(token_data => {
-                if (token_data.token_standard === "v2") {
-                    let creator_address = token_data.current_token_data?.current_collection?.creator_address || "";
-                    let collection_name = token_data.current_token_data?.current_collection?.collection_name || "";
-                    let collection_id = token_data.current_token_data?.current_collection?.collection_id || "";
-                    let name = token_data.current_token_data?.token_name || "";
-                    let data_id = token_data.current_token_data?.token_data_id || "";
-                    let uri = token_data.current_token_data?.token_uri || "";
-                    let type = "NFT"
-                    if (token_data.is_soulbound_v2 && token_data.is_fungible_v2) {
-                        type = "Soulbound Fungible Token";
-                    } else if (token_data.is_soulbound_v2) {
-                        type = "Soulbound NFT";
-                    } else if (token_data.is_fungible_v2) {
-                        // Fungible will also skip for now in this demo
-                        type = "Fungible Token";
-                    }
-                    return {
-                        standard: "V2",
-                        collection: collection_name,
-                        collection_id,
-                        name: name,
-                        data_id: data_id,
-                        uri: uri,
-                        type: type,
-                        property_version: "",
-                        creator_address: creator_address
-                    }
-                } else {
-                    // Handle V1
-                    let collection_creator = token_data.current_token_data?.current_collection?.creator_address || "";
-                    let collection_name = token_data.current_token_data?.current_collection?.collection_name || "";
-                    let collection_id = token_data.current_token_data?.current_collection?.collection_id || "";
-                    let name = token_data.current_token_data?.token_name || "";
-                    let data_id = token_data.current_token_data?.token_data_id || "";
-                    let uri = token_data.current_token_data?.token_uri || "";
-                    let property_version = token_data.current_token_data?.largest_property_version_v1 || "";
-                    let type = "NFT" // TODO: Handle fungible
-                    return {
-                        standard: "V1",
-                        collection: collection_name,
-                        collection_id,
-                        name: name,
-                        data_id: data_id,
-                        uri: uri,
-                        type: type,
-                        property_version: property_version,
-                        creator_address: collection_creator
-                    }
-                }
-            })
-
-            setWallet({name: walletContextState.account.address, tokens: tokens})
-            return
-        } catch (error: any) {
-            console.log("Failed to load wallet" + error)
-        }
-
-        setWallet({name: "Unable to load wallet", tokens: []})
-    }
 
     const isSelectedNetwork = (): boolean => {
         return walletContextState.network?.name?.toLowerCase() === props.expectedNetwork.toLowerCase();
@@ -141,54 +53,7 @@ function App(props: { expectedNetwork: Network }) {
             {
                 walletContextState.connected && isSelectedNetwork() &&
                 <Layout>
-                    <Row align="middle">
-                        <Col offset={2}>
-                            <h2>Wallet {wallet?.name}</h2>
-                        </Col>
-                    </Row>
-                    <Row align="middle">
-                        <Col offset={2}>
-                            <Button
-                                onClick={() => loadWalletNfts()}
-                                type="primary"
-                                style={{height: "40px", backgroundColor: "#3f67ff"}}
-                            >
-                                Force refresh NFTs
-                            </Button>
-                        </Col>
-                    </Row>
-                    <Row>
-                        <Col offset={2}>
-                            <ol>
-                                {wallet?.tokens.map(({
-                                                         standard,
-                                                         collection,
-                                                         collection_id,
-                                                         name,
-                                                         data_id,
-                                                         uri,
-                                                         type,
-                                                         creator_address,
-                                                         property_version
-                                                     }) =>
-                                    <li>
-                                        <Tooltip placement="right" title={`${standard} ${type}\n
-                                        Creator: ${creator_address}\n
-                                        Collection: ${collection}\n
-                                        Collection id: ${collection_id}\n
-                                        Property version: ${property_version}
-                                        `}>
-                                            <Image
-                                                width={50}
-                                                src={uri}
-                                                alt={"img"}
-                                            />
-                                            Name: {name} | Id: <b>{data_id}</b>
-                                        </Tooltip>
-                                    </li>)}
-                            </ol>
-                        </Col>
-                    </Row>
+                    <Wallet network={props.expectedNetwork}/>
                     <Row align="middle">
                         <Col offset={2}>
                             <Launchpad network={props.expectedNetwork}
@@ -214,6 +79,215 @@ function App(props: { expectedNetwork: Network }) {
             }
         </>
     );
+}
+
+function Wallet(props: { network: Network }) {
+    const [totalNfts, setTotalNfts] = useState<number>(10);
+    const [wallet, setWallet] = useState<{
+        name: string,
+        tokens: {
+            standard: string,
+            collection: string,
+            collection_id: string,
+            name: string,
+            data_id: string,
+            uri: string,
+            type: string,
+            property_version: string,
+            creator_address: string
+        }[]
+    }>();
+    const walletContextState = useWallet();
+    useEffect(() => {
+        // On load, pull the account's wallet and check that it exists (fund it if it doesn't)
+        if (!walletContextState.account) return;
+
+        getTotalNfts();
+        loadWalletNfts(0, 10);
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [walletContextState])
+
+
+    const getTotalNfts = async () => {
+        if (!walletContextState.account) {
+            return {name: "Wallet not connected", nfts: []};
+        }
+
+        try {
+            // TODO: make a query to get total Nfts
+
+            setTotalNfts(100);
+        } catch (error: any) {
+            console.log("Failed to load wallet" + error)
+            setTotalNfts(10);
+        }
+    }
+
+    const loadWalletNfts = async (page: number, limit: number) => {
+        // Ensure you're logged in
+        if (!walletContextState.account) {
+            return {name: "Wallet not connected", nfts: []};
+        }
+
+        try {
+            let tokens_query = await getProvider(props.network).indexerClient.getOwnedTokens(walletContextState.account.address, {
+                options: {
+                    offset: page * limit,
+                    limit: limit
+                }
+            });
+
+            let tokens: Array<{
+                standard: string,
+                collection: string,
+                collection_id: string,
+                name: string,
+                data_id: string,
+                uri: string,
+                type: string,
+                property_version: string,
+                creator_address: string
+            }> = [];
+            for (const token_data of tokens_query.current_token_ownerships_v2) {
+                if (token_data.token_standard === "v2") {
+                    let creator_address = token_data.current_token_data?.current_collection?.creator_address || "";
+                    let collection_name = token_data.current_token_data?.current_collection?.collection_name || "";
+                    let collection_id = token_data.current_token_data?.current_collection?.collection_id || "";
+                    let name = token_data.current_token_data?.token_name || "";
+                    let data_id = token_data.current_token_data?.token_data_id || "";
+                    let uri = token_data.current_token_data?.token_uri || "";
+                    let type = "NFT"
+                    if (token_data.is_soulbound_v2 && token_data.is_fungible_v2) {
+                        type = "Soulbound Fungible Token";
+                    } else if (token_data.is_soulbound_v2) {
+                        type = "Soulbound NFT";
+                    } else if (token_data.is_fungible_v2) {
+                        // Fungible will also skip for now in this demo
+                        type = "Fungible Token";
+                    }
+                    tokens.push({
+                        standard: "V2",
+                        collection: collection_name,
+                        collection_id,
+                        name: name,
+                        data_id: data_id,
+                        uri: uri,
+                        type: type,
+                        property_version: "",
+                        creator_address: creator_address
+                    });
+                } else {
+                    // Handle V1
+                    let collection_creator = token_data.current_token_data?.current_collection?.creator_address || "";
+                    let collection_name = token_data.current_token_data?.current_collection?.collection_name || "";
+                    let collection_id = token_data.current_token_data?.current_collection?.collection_id || "";
+                    let name = token_data.current_token_data?.token_name || "";
+                    let data_id = token_data.current_token_data?.token_data_id || "";
+                    let uri = token_data.current_token_data?.token_uri || "";
+
+                    // Support URI in metadata
+                    // TODO: Verify all image endings
+                    uri = await ensureImageUri(uri);
+
+                    let property_version = token_data.current_token_data?.largest_property_version_v1 || "";
+                    let type = "NFT" // TODO: Handle fungible
+                    tokens.push({
+                        standard: "V1",
+                        collection: collection_name,
+                        collection_id,
+                        name: name,
+                        data_id: data_id,
+                        uri: uri,
+                        type: type,
+                        property_version: property_version,
+                        creator_address: collection_creator
+                    });
+                }
+            }
+
+            setWallet({name: walletContextState.account.address, tokens: tokens})
+            return
+        } catch (error: any) {
+            console.log("Failed to load wallet" + error)
+        }
+
+        setWallet({name: "Unable to load wallet", tokens: []})
+    }
+
+    return <><Row align="middle">
+        <Col offset={2}>
+            <h2>Wallet {wallet?.name}</h2>
+        </Col>
+    </Row>
+        <Row>
+            <Col offset={2}>
+                {wallet?.tokens.map((item) =>
+                    <WalletItem item={item}/>
+                )}
+            </Col>
+        </Row>
+        <Row>
+            <Col offset={2}>
+                <Pagination onChange={(page, limit) => {
+                    loadWalletNfts(page - 1, limit)
+                }} defaultCurrent={1} total={totalNfts}/>
+            </Col>
+        </Row>
+    </>;
+}
+
+function WalletItem(props: {
+    item: Item
+}) {
+    // TODO: Add listing directly
+    return <Row align="middle">
+        <Col>
+            <Tooltip placement="right"
+                     title={`${props.item.standard} ${props.item.type}\n
+                                        Creator: ${props.item.creator_address}\n
+                                        Collection: ${props.item.collection}\n
+                                        Collection id: ${props.item.collection_id}\n
+                                        Property version: ${props.item.property_version}\n
+                                        Data id: ${props.item.data_id}
+                                        `}>
+
+                <Image
+                    width={100}
+                    src={props.item.uri}
+                    alt={props.item.name}
+                />
+            </Tooltip>
+            <b>{props.item.collection} : {props.item.name}</b>
+            {props.item.standard.toLowerCase() === "v1" &&
+                <p>Creator: {props.item.creator_address} Property Version: {props.item.property_version}</p>}
+            {props.item.standard.toLowerCase() === "v2" &&
+                <p>Collection Address: {props.item.collection_id} Token Address: {props.item.data_id}</p>}
+        </Col>
+    </Row>;
+}
+
+export const ensureImageUri = async (uri: string) => {
+    // Empty means something's wrong anyways
+    if (!uri) {
+        return uri
+    }
+    if (!uri.endsWith(".jpg") && !uri.endsWith(".jpeg") && !uri.endsWith(".png") && !uri.endsWith(".svg")) {
+        uri = ensureHttps(uri);
+        let response = await fetch(uri);
+        const data = await response.json()
+        if (data.image) {
+            uri = ensureHttps(data.image);
+        }
+    }
+    return uri
+}
+
+export const ensureHttps = (uri: string): string => {
+    if (uri.startsWith("ipfs://")) {
+        uri = uri.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/")
+    }
+    return uri
 }
 
 export default App;
