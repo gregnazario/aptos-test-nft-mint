@@ -188,9 +188,13 @@ function Wallet(props: { network: Network }) {
 
                     // Support URI in metadata
                     // TODO: Verify all image endings
-                    uri = await ensureImageUri(uri);
+                    try {
+                        uri = await ensureImageUri(uri);
+                    } catch(error: any) {
+                        console.log(`Failed to query ${uri} ${error}`)
+                    }
 
-                    let property_version = token_data.current_token_data?.largest_property_version_v1 || "";
+                    let property_version = token_data.current_token_data?.largest_property_version_v1 || 0;
                     let type = "NFT" // TODO: Handle fungible
                     tokens.push({
                         standard: "V1",
@@ -245,10 +249,6 @@ function WalletItem(props: {
         <Col>
             <Tooltip placement="right"
                      title={`${props.item.standard} ${props.item.type}\n
-                                        Creator: ${props.item.creator_address}\n
-                                        Collection: ${props.item.collection}\n
-                                        Collection id: ${props.item.collection_id}\n
-                                        Property version: ${props.item.property_version}\n
                                         Data id: ${props.item.data_id}
                                         `}>
 
@@ -272,13 +272,17 @@ export const ensureImageUri = async (uri: string) => {
     if (!uri) {
         return uri
     }
-    if (!uri.endsWith(".jpg") && !uri.endsWith(".jpeg") && !uri.endsWith(".png") && !uri.endsWith(".svg")) {
-        uri = ensureHttps(uri);
-        let response = await fetch(uri);
-        const data = await response.json()
-        if (data.image) {
-            uri = ensureHttps(data.image);
+    try {
+        if (!uri.endsWith(".jpg") && !uri.endsWith(".jpeg") && !uri.endsWith(".png") && !uri.endsWith(".svg")) {
+            uri = ensureHttps(uri);
+            let response = await fetch(uri);
+            const data = await response.json()
+            if (data.image) {
+                uri = ensureHttps(data.image);
+            }
         }
+    } catch (error: any) {
+        // Let the URI stay as the old one for now
     }
     return uri
 }

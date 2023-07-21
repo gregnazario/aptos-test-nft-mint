@@ -1,7 +1,7 @@
 import {Alert, Button, Col, Image, Input, Row, Select, Tooltip} from "antd";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
 import {useEffect, useState} from "react";
-import {Marketplace as Helper, V2Listing} from "./MarketplaceHelper"
+import {Marketplace as Helper, TokenOffer, V2Listing} from "./MarketplaceHelper"
 import {
     onStringChange,
     onNumberChange,
@@ -10,6 +10,7 @@ import {
     TransactionContext, getProvider
 } from "./Helper";
 import {Network} from "aptos";
+import {ensureImageUri} from "./App";
 
 export const MODULE_ADDRESS = "0x6de37368e31dff4580b211295198159ee6f98b42ffa93c5683bb955ca1be67e0";
 export const DEVNET_FEE_SCHEDULE = "0x96e6143a72d9cb40872972c241112ecb43cc0ca8aca376a940a182d620ccef1c";
@@ -246,8 +247,10 @@ function Marketplace(props: TransactionContext) {
                         <ExtractTokenV1 network={props.network} account={props.account}
                                         submitTransaction={props.submitTransaction}/>}
                     {(type === FIXED_PRICE) &&
-                        <Listings network={props.network} account={props.account}
-                                  submitTransaction={props.submitTransaction}/>}
+                        <Listings ctx={{
+                            network: props.network, account: props.account,
+                            submitTransaction: props.submitTransaction
+                        }} tokenStandard={tokenStandard}/>}
                     {(type === AUCTION) &&
                         <AuctionListings network={props.network} account={props.account}
                                          submitTransaction={props.submitTransaction}/>}
@@ -1055,20 +1058,31 @@ function ExtractTokenV1(props: TransactionContext) {
     );
 }
 
-function Listings(props: TransactionContext) {
-    const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
+function Listings(props: { ctx: TransactionContext, tokenStandard: string }) {
+    const MARKETPLACE_HELPER = new Helper(getProvider(props.ctx.network), MODULE_ADDRESS);
     const [listings, setListings] = useState<Array<V2Listing>>();
     const [listingsError, setListingsError] = useState<string>();
 
     useEffect(() => {
         loadListings()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [props.account])
+    }, [props.ctx.account, props.tokenStandard])
 
     const loadListings = async () => {
         try {
+            let listings;
+            if (props.tokenStandard === V1) {
+                listings = (await MARKETPLACE_HELPER.getV1Listings(MODULE_ADDRESS, "example_v2_marketplace"));
+                for (let listing of listings) {
+                    listing.token_uri = await ensureImageUri(listing.token_uri);
+                }
+            } else {
+                listings = (await MARKETPLACE_HELPER.getV2Listings(MODULE_ADDRESS, "example_v2_marketplace"));
+                for (let listing of listings) {
+                    listing.token_uri = await ensureImageUri(listing.token_uri);
+                }
+            }
             // TODO: load based on fee schedule
-            let listings = (await MARKETPLACE_HELPER.getV2Listings(MODULE_ADDRESS, "example_v2_marketplace"));
             setListingsError("");
             setListings(listings);
         } catch (error: any) {
@@ -1096,7 +1110,7 @@ function Listings(props: TransactionContext) {
             <Row align="middle">
                 <Col span={8}>
                     {!listingsError && listings?.map((listing) => {
-                        return <Listing listing={listing} ctx={props}/>;
+                        return <Listing listing={listing} ctx={props.ctx}/>;
                     })
                     }
                     {listingsError && <Alert type="error" message={listingsError}/>}
@@ -1192,7 +1206,7 @@ function AuctionListings(props: TransactionContext) {
                         collection_id: listing.current_token_data.collection_id,
                         token_data_id: listing.current_token_data.token_data_id,
                         token_name: listing.current_token_data.token_name,
-                        token_uri: listing.current_token_data?.token_uri,
+                        token_uri: await ensureImageUri(listing.current_token_data?.token_uri),
                         price: listing.starting_bid_price,
                         listing_id: listing.listing_id,
                         is_deleted: listing.is_deleted,
@@ -1509,11 +1523,11 @@ function V2CollectionOffers(props: TransactionContext) {
 
 function TokenOffers(props: TransactionContext) {
     const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
-    const [tokenOffers, setTokenOffers] = useState<any>("");
+    const [tokenOffers, setTokenOffers] = useState<Array<TokenOffer>>();
     const [tokenAddress, setTokenAddress] = useState<string>("");
 
     const loadTokenOffers = async () => {
-        let tokenOffers = await MARKETPLACE_HELPER.getTokenOffers(MODULE_ADDRESS, "example_v2_marketplace", tokenAddress, false);
+        let tokenOffers = await MARKETPLACE_HELPER.getTokenOffers(MODULE_ADDRESS, "example_v2_marketplace", tokenAddress);
         setTokenOffers(tokenOffers);
     }
 
@@ -1551,11 +1565,33 @@ function TokenOffers(props: TransactionContext) {
             </Row>
             <Row align="middle">
                 <Col>
-                    <p>Token Offers: {JSON.stringify(tokenOffers)}</p>
+                    {tokenOffers?.map((offer) => {
+                        return <TokenOfferV2 offer={offer}/>;
+                    })}
                 </Col>
             </Row>
         </>
     );
+}
+
+function TokenOfferV2(props: { offer: TokenOffer }) {
+    // TODO" Use collection name
+    // TODO: Add accept button
+    // TODO: Add cancel button
+    return <Row align="middle">
+        <Col>
+            <Tooltip placement="right"
+                     title={`${props.offer.collection_name} - ${props.offer.token_name}
+                | Offered
+                by ${props.offer.buyer}`}>
+                <Image
+                    width={100}
+                    src={props.offer.token_uri}
+                    alt={props.offer.token_name}
+                />
+            </Tooltip>
+        </Col>
+    </Row>;
 }
 
 function CollectionOffers(props: TransactionContext) {
@@ -1657,7 +1693,7 @@ function CollectionOffers(props: TransactionContext) {
                                     <Col>
                                         <Tooltip placement="right" title={``}>
                                             <b>Offer {collection_offer_id}</b> - {current_collection_data.collection_name} - {item_price / 100000000} APT
-                                            | Requeested
+                                            | Requested
                                             by {buyer}, expires at {expiration_time}, {remaining_token_amount} offers
                                             remaining
                                         </Tooltip>
