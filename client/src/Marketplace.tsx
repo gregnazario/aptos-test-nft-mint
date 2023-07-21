@@ -1,7 +1,7 @@
 import {Alert, Button, Col, Image, Input, Row, Select, Tooltip} from "antd";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
 import {useEffect, useState} from "react";
-import {Marketplace as Helper} from "./MarketplaceHelper"
+import {Marketplace as Helper, V2Listing} from "./MarketplaceHelper"
 import {
     onStringChange,
     onNumberChange,
@@ -1057,19 +1057,7 @@ function ExtractTokenV1(props: TransactionContext) {
 
 function Listings(props: TransactionContext) {
     const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
-    const [listings, setListings] = useState<{
-        collection_id: string,
-        token_data_id: string,
-        token_name: string,
-        token_uri: string,
-        price: number,
-        listing_id: string,
-        is_deleted: boolean,
-        token_amount: number,
-        seller: string,
-        marketplace: string,
-        contract_address: string
-    }[]>();
+    const [listings, setListings] = useState<Array<V2Listing>>();
     const [listingsError, setListingsError] = useState<string>();
 
     useEffect(() => {
@@ -1079,27 +1067,10 @@ function Listings(props: TransactionContext) {
 
     const loadListings = async () => {
         try {
-            let listings = (await MARKETPLACE_HELPER.getV2Listings(MODULE_ADDRESS, "example_v2_marketplace", false));
-            let parsed = [];
-            for (const listing of listings) {
-                parsed.push(
-                    {
-                        collection_id: listing.current_token_data.collection_id,
-                        token_data_id: listing.current_token_data.token_data_id,
-                        token_name: listing.current_token_data.token_name,
-                        token_uri: listing.current_token_data?.token_uri,
-                        price: listing.price,
-                        listing_id: listing.listing_id,
-                        is_deleted: listing.is_deleted,
-                        token_amount: listing.token_amount,
-                        seller: listing.seller,
-                        marketplace: listing.marketplace,
-                        contract_address: listing.contract_address
-                    }
-                )
-            }
+            // TODO: load based on fee schedule
+            let listings = (await MARKETPLACE_HELPER.getV2Listings(MODULE_ADDRESS, "example_v2_marketplace"));
             setListingsError("");
-            setListings(parsed);
+            setListings(listings);
         } catch (error: any) {
             setListingsError(`Failed to load listings ${listings}`);
             setListings([]);
@@ -1140,6 +1111,9 @@ function Listings(props: TransactionContext) {
                 <Col span={8}>
                     {!listingsError && <ol>
                         {listings?.map(({
+                                            collection_id,
+                                            collection_name,
+
                                             token_name,
                                             token_uri,
                                             price,
@@ -1596,7 +1570,6 @@ function CollectionOffers(props: TransactionContext) {
         current_collection_data: { collection_name: string },
         item_price: number,
         remaining_token_amount: number,
-        is_deleted: boolean
     }[]>();
     const [collectionAddress, setCollectionAddress] = useState<string>("");
     const [tokenAddress, setTokenAddress] = useState<string>("");
