@@ -89,53 +89,60 @@ export const LISTINGS_ALL_QUERY =
         }
     }`
 
-type V2AuctionsQueryResponse = { nft_marketplace_v2_current_nft_marketplace_auctions: V2AuctionsResponse };
-export type V2AuctionsResponse = Array<{
-
-    current_token_data: {
-        collection_id: string
-        token_data_id: string
-        token_name: string
-        token_uri: string
-    },
+type AuctionsQueryResponse = { nft_marketplace_v2_current_nft_marketplace_auctions: AuctionsResponse };
+export type AuctionsResponse = Array<{
     buy_it_now_price: number | null,
+    starting_bid_price: number
     current_bid_price: number | null,
     current_bidder: string | null,
     expiration_time: string,
     listing_id: string,
-    is_deleted: boolean,
+    current_token_data: {
+        current_collection: {
+            creator_address: string,
+            collection_name: string,
+        },
+        collection_id: string
+        token_data_id: string
+        token_name: string
+        token_uri: string
+        largest_property_version_v1: string
+    },
     token_amount: number,
     seller: string,
-    marketplace: string,
     contract_address: string,
-    starting_bid_price: number
+    fee_schedule_id: string,
 }>;
-export const V2_AUCTIONS_ALL_QUERY =
-    `query GetV2Listings($contract_address:String!, $marketplace: String!, $is_deleted: Boolean!) {
-    nft_marketplace_v2_current_nft_marketplace_auctions(where: {
-      contract_address: { _eq: $contract_address }
-      marketplace: { _eq: $marketplace }
-      is_deleted: { _eq: $is_deleted }
-      current_token_data: {token_standard: {_eq: "v2"}}
-    }) {
-    contract_address
-    marketplace
+export const AUCTIONS_QUERY =
+    `query GetAuctions($contract_address: String!, $fee_schedule_id: String!) {
+      nft_marketplace_v2_current_nft_marketplace_auctions(where: {
+        contract_address: { _eq: $contract_address }
+        fee_schedule_id: { _eq: $fee_schedule_id }
+        is_deleted: { _eq: false }
+      }) {
       buy_it_now_price
+      starting_bid_price
       current_bid_price
       current_bidder
+      expiration_time
+      listing_id
       current_token_data {
+        current_collection {
+        creator_address
+          collection_name
+        }
         collection_id
         token_data_id
         token_name
+        largest_property_version_v1
         token_uri
       }
-      expiration_time
-      is_deleted
-      listing_id
-      seller
-      starting_bid_price
       token_amount
-    }`;
+      seller
+      contract_address
+      fee_schedule_id
+    }
+ }`;
 
 type TokenOfferIndexerResponse = {
     nft_marketplace_v2_current_nft_marketplace_token_offers: Array<TokenOfferIndexer>
@@ -642,14 +649,13 @@ export class Marketplace {
         return listings
     }
 
-    async getV2Auctions(contractAddress: MaybeHexString, marketplace: String, isDeleted: boolean): Promise<V2AuctionsResponse> {
+    async getAuctions(contractAddress: MaybeHexString, feeScheduleId: String): Promise<AuctionsResponse> {
         // TODO: Fix query
         const variables = {
             contract_address: HexString.ensure(contractAddress).hex(),
-            marketplace: marketplace,
-            is_deleted: isDeleted,
+            fee_schedule_id: feeScheduleId,
         };
-        let result = await this.queryIndexer<V2AuctionsQueryResponse>(V2_AUCTIONS_ALL_QUERY, variables);
+        let result = await this.queryIndexer<AuctionsQueryResponse>(AUCTIONS_QUERY, variables);
         return result.nft_marketplace_v2_current_nft_marketplace_auctions;
     }
 

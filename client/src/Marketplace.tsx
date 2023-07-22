@@ -44,7 +44,6 @@ const defaultFeeSchedule = (network: Network) => {
 function Marketplace(props: TransactionContext) {
     const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
     const [tokenStandard, setTokenStandard] = useState<string>(V2);
-    const [refresh, setRefresh] = useState<number>(0);
     const [type, setType] = useState<string>(FIXED_PRICE);
     const [feeSchedule, setFeeSchedule] = useState<string>(defaultFeeSchedule(props.network));
     const [feeScheduleDetails, setFeeScheduleDetails] = useState<{
@@ -59,10 +58,6 @@ function Marketplace(props: TransactionContext) {
         loadFeeSchedule()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [props.account])
-
-    const refreshPage = () => {
-        setRefresh(refresh + 1);
-    }
 
     const loadFeeSchedule = async () => {
         // Ensure you're logged in
@@ -90,7 +85,6 @@ function Marketplace(props: TransactionContext) {
                 commission: ""
             })
         }
-        refreshPage();
     }
 
     const createFeeSchedule = async () => {
@@ -250,10 +244,12 @@ function Marketplace(props: TransactionContext) {
                         <Listings ctx={{
                             network: props.network, account: props.account,
                             submitTransaction: props.submitTransaction,
-                        }} feeSchedule={feeSchedule} refresh={refresh}/>}
+                        }} feeSchedule={feeSchedule}/>}
                     {(type === AUCTION) &&
-                        <AuctionListings network={props.network} account={props.account}
-                                         submitTransaction={props.submitTransaction}/>}
+                        <AuctionListings ctx={{
+                            network: props.network, account: props.account,
+                            submitTransaction: props.submitTransaction,
+                        }} feeSchedule={feeSchedule}/>}
                     {type === TOKEN_OFFERS &&
                         <TokenOffers network={props.network} account={props.account}
                                      submitTransaction={props.submitTransaction}/>}
@@ -995,7 +991,7 @@ function ExtractTokenV1(props: TransactionContext) {
     );
 }
 
-function Listings(props: { ctx: TransactionContext, feeSchedule: string, refresh: number }) {
+function Listings(props: { ctx: TransactionContext, feeSchedule: string }) {
     const MARKETPLACE_HELPER = new Helper(getProvider(props.ctx.network), MODULE_ADDRESS);
     const [listings, setListings] = useState<Array<Listing>>();
     const [listingsError, setListingsError] = useState<string>();
@@ -1003,7 +999,7 @@ function Listings(props: { ctx: TransactionContext, feeSchedule: string, refresh
     useEffect(() => {
         loadListings()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [props.ctx.account, props.feeSchedule, props.refresh])
+    }, [props.ctx.account, props.feeSchedule])
 
     const loadListings = async () => {
         try {
@@ -1091,46 +1087,58 @@ function ListingView(props: {
 }
 
 
-function AuctionListings(props: TransactionContext) {
-    const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
-    const [listings, setListings] = useState<{
-        collection_id: string,
-        token_data_id: string,
-        token_name: string,
-        token_uri: string,
-        price: number,
-        listing_id: string,
-        is_deleted: boolean,
-        token_amount: number,
-        seller: string,
-        marketplace: string,
-        contract_address: string
-    }[]>();
+function AuctionListings(props: { ctx: TransactionContext, feeSchedule: string }) {
+    const MARKETPLACE_HELPER = new Helper(getProvider(props.ctx.network), MODULE_ADDRESS);
+    const [listings, setListings] = useState<
+        {
+            buy_it_now_price: number | null,
+            starting_bid_price: number,
+            current_bid_price: number | null,
+            current_bidder: string | null,
+            expiration_time: string,
+            listing_id: string,
+            creator_address: string,
+            collection_name: string,
+            collection_id: string,
+            token_data_id: string,
+            token_name: string,
+            token_uri: string,
+            token_amount: number,
+            seller: string,
+            contract_address: string,
+            fee_schedule_id: string,
+        }[]
+    >();
     const [listingsError, setListingsError] = useState<string>();
 
     useEffect(() => {
         loadListings()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [props.account])
+    }, [props.ctx.account, props.feeSchedule])
 
     const loadListings = async () => {
         try {
-            let listings = (await MARKETPLACE_HELPER.getV2Auctions(MODULE_ADDRESS, "example_v2_marketplace", false));
+            let listings = (await MARKETPLACE_HELPER.getAuctions(MODULE_ADDRESS, props.feeSchedule));
             let parsed = [];
             for (const listing of listings) {
                 parsed.push(
                     {
+                        buy_it_now_price: listing.buy_it_now_price,
+                        starting_bid_price: listing.starting_bid_price,
+                        current_bid_price: listing.current_bid_price,
+                        current_bidder: listing.current_bidder,
+                        expiration_time: listing.expiration_time,
+                        listing_id: listing.listing_id,
+                        creator_address: listing.current_token_data.current_collection.creator_address,
+                        collection_name: listing.current_token_data.current_collection.collection_name,
                         collection_id: listing.current_token_data.collection_id,
                         token_data_id: listing.current_token_data.token_data_id,
                         token_name: listing.current_token_data.token_name,
                         token_uri: await ensureImageUri(listing.current_token_data?.token_uri),
-                        price: listing.starting_bid_price,
-                        listing_id: listing.listing_id,
-                        is_deleted: listing.is_deleted,
                         token_amount: listing.token_amount,
                         seller: listing.seller,
-                        marketplace: listing.marketplace,
-                        contract_address: listing.contract_address
+                        contract_address: listing.contract_address,
+                        fee_schedule_id: listing.fee_schedule_id
                     }
                 )
             }
@@ -1144,16 +1152,16 @@ function AuctionListings(props: TransactionContext) {
 
     const cancelListing = async (listingAddress: string) => {
         // Ensure you're logged in
-        if (!props.account) return [];
+        if (!props.ctx.account) return [];
         const payload = await MARKETPLACE_HELPER.endFixedPriceListing(listingAddress);
-        await runTransaction(props, payload);
+        await runTransaction(props.ctx, payload);
     }
 
     const purchaseListing = async (listingAddress: string) => {
         // Ensure you're logged in
-        if (!props.account) return [];
+        if (!props.ctx.account) return [];
         const payload = await MARKETPLACE_HELPER.purchaseListing(listingAddress);
-        await runTransaction(props, payload);
+        await runTransaction(props.ctx, payload);
     }
 
     return (
@@ -1176,17 +1184,29 @@ function AuctionListings(props: TransactionContext) {
                 <Col span={8}>
                     {!listingsError && <ol>
                         {listings?.map(({
+                                            buy_it_now_price,
+                                            starting_bid_price,
+                                            current_bid_price,
+                                            current_bidder,
+                                            expiration_time,
+                                            listing_id,
+                                            creator_address,
+                                            collection_name,
+                                            collection_id,
+                                            token_data_id,
                                             token_name,
                                             token_uri,
-                                            price,
-                                            listing_id,
+                                            token_amount,
                                             seller,
+                                            contract_address,
+                                            fee_schedule_id,
                                         }) =>
                             <li>
                                 <Row align="middle">
                                     <Col>
                                         <Tooltip placement="right" title={``}>
-                                            <b>Listing {listing_id}</b> - {token_name} - {price / 100000000} APT | Sold
+                                            <b>Listing {listing_id}</b> - {token_name} - {current_bid_price ?? starting_bid_price / 100000000} APT
+                                            | Sold
                                             by {seller}
                                             <Image
                                                 width={50}
@@ -1205,7 +1225,7 @@ function AuctionListings(props: TransactionContext) {
                                         </Button>
                                     </Col>
                                     <Col>
-                                        {seller === props.account?.address && <Button
+                                        {seller === props.ctx.account?.address && <Button
                                             onClick={() => cancelListing(listing_id)}
                                             type="primary"
                                             style={{height: "40px", backgroundColor: "#3f67ff"}}
