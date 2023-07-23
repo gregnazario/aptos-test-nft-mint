@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect} from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
@@ -17,9 +17,12 @@ import {MSafeWalletAdapter} from "msafe-plugin-wallet-adapter";
 import {WelldoneWallet} from "@welldone-studio/aptos-wallet-adapter";
 
 import {AptosWalletAdapterProvider, NetworkName,} from "@aptos-labs/wallet-adapter-react";
-import {Select} from "antd";
+import {Alert} from "antd";
 import {Network} from "aptos";
 import {createBrowserHistory} from "history";
+import {Route, Routes, useParams} from "react-router";
+import {BrowserRouter} from "react-router-dom";
+import {Wallet} from "./pages/Wallet";
 
 
 const DEVNET_WALLETS = [
@@ -88,44 +91,72 @@ const getNetwork = (input: string | null) => {
 }
 
 function Selector(this: any) {
-    const [network, setNetwork] = useState<Network>(getNetwork(new URLSearchParams(window.location.search).get("network")) ?? Network.MAINNET);
     const browserHistory = createBrowserHistory();
+    const network = getNetwork(new URLSearchParams(window.location.search).get("network")) ?? Network.MAINNET;
 
     useEffect(() => {
         if (!getNetwork(new URLSearchParams(window.location.search).get("network"))) {
             browserHistory.push(`?network=${Network.MAINNET}`);
         }
     });
-
+    //<Route path="/collection/:collection_id" element={<Wallet network={network}/>}/>
     return <>
-        <Select
-            defaultValue={network}
-            style={{width: 120}}
-            onChange={(input) => {
-                setNetwork(input);
-                browserHistory.push(`?network=${input}`);
-            }}
-            options={[
-                {value: Network.DEVNET, label: "Devnet"},
-                {value: Network.TESTNET, label: "Testnet"},
-                {value: Network.MAINNET, label: "Mainnet"},
-            ]}
-        />
-
-        {network === Network.DEVNET &&
-            <AptosWalletAdapterProvider plugins={DEVNET_WALLETS} autoConnect={true}>
-                <App expectedNetwork={network}/>
-            </AptosWalletAdapterProvider>}
-        {network === Network.TESTNET &&
-            <AptosWalletAdapterProvider plugins={TESTNET_WALLETS} autoConnect={true}>
-                <App expectedNetwork={network}/>
-            </AptosWalletAdapterProvider>}
-        {network === Network.MAINNET &&
-            <AptosWalletAdapterProvider plugins={MAINNET_WALLETS} autoConnect={true}>
-                <App expectedNetwork={network}/>
-            </AptosWalletAdapterProvider>}
+        <BrowserRouter>
+            <Routes>
+                <Route index path="/" element={<AppPage network={network}/>}/>
+                <Route path="/wallet/:wallet_address" element={<WalletPage network={network}/>}/>
+                <Route path="*" element={<Alert type="error" message="Invalid page"/>}/>
+            </Routes>
+        </BrowserRouter>
     </>
 }
+
+// TODO: Figure out a better way to handle these
+function AppPage(props: {
+    network: Network
+}) {
+    return <>{props.network === Network.DEVNET &&
+        <AptosWalletAdapterProvider plugins={DEVNET_WALLETS} autoConnect={true}>
+            <App expectedNetwork={props.network}/>
+        </AptosWalletAdapterProvider>
+    }
+        {
+            props.network === Network.TESTNET &&
+            <AptosWalletAdapterProvider plugins={TESTNET_WALLETS} autoConnect={true}>
+                <App expectedNetwork={props.network}/>
+            </AptosWalletAdapterProvider>
+        }
+        {
+            props.network === Network.MAINNET &&
+            <AptosWalletAdapterProvider plugins={MAINNET_WALLETS} autoConnect={true}>
+                <App expectedNetwork={props.network}/>
+            </AptosWalletAdapterProvider>
+        }
+    </>
+}
+
+export function WalletPage(props: { network: Network }) {
+    let {wallet_address} = useParams();
+    return <>{props.network === Network.DEVNET &&
+        <AptosWalletAdapterProvider plugins={DEVNET_WALLETS} autoConnect={true}>
+            <Wallet network={props.network} wallet_address={wallet_address ?? ""}/>
+        </AptosWalletAdapterProvider>
+    }
+        {
+            props.network === Network.TESTNET &&
+            <AptosWalletAdapterProvider plugins={TESTNET_WALLETS} autoConnect={true}>
+                <Wallet network={props.network} wallet_address={wallet_address ?? ""}/>
+            </AptosWalletAdapterProvider>
+        }
+        {
+            props.network === Network.MAINNET &&
+            <AptosWalletAdapterProvider plugins={MAINNET_WALLETS} autoConnect={true}>
+                <Wallet network={props.network} wallet_address={wallet_address ?? ""}/>
+            </AptosWalletAdapterProvider>
+        }
+    </>
+}
+
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))
