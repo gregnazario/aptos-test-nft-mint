@@ -38,8 +38,7 @@
     "@types/react-dom": "^18.2.7",
     "@types/react-router-dom": "^5.3.3",
     "gh-pages": "^5.0.0",
-    "react-scripts": "^5.0.1",
-    "typescript": "^5.1.6"
+    "react-scripts": "^5.0.1"
   },
   "scripts": {
     "start": "react-scripts start",
