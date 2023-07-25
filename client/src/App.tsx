@@ -1,12 +1,8 @@
 import {Alert, Col, Layout, Row} from "antd";
-import {WalletSelector} from "@aptos-labs/wallet-adapter-ant-design";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
 import {Network} from "aptos";
 import {useWallet} from "@aptos-labs/wallet-adapter-react";
-import Launchpad from './Launchpad';
 import Marketplace from './Marketplace';
-import Transfer from './Transfer';
-import {Wallet} from "./pages/Wallet";
 
 function App(props: { expectedNetwork: Network }) {
     const walletContextState = useWallet();
@@ -17,16 +13,6 @@ function App(props: { expectedNetwork: Network }) {
 
     return (
         <>
-            <Layout>
-                <Row align="middle">
-                    <Col span={10} offset={2}>
-                        <h1>NFT Test Marketplace ({props.expectedNetwork})</h1>
-                    </Col>
-                    <Col span={12} style={{textAlign: "right", paddingRight: "200px"}}>
-                        <WalletSelector/>
-                    </Col>
-                </Row>
-            </Layout>
             {
                 !walletContextState.connected &&
                 <Alert message={`Please connect your wallet`} type="info"/>
@@ -40,26 +26,11 @@ function App(props: { expectedNetwork: Network }) {
             {
                 walletContextState.connected && isSelectedNetwork() &&
                 <Layout>
-                    <Wallet network={props.expectedNetwork} wallet_address={walletContextState.account?.address ?? ""}/>
-                    <Row align="middle">
-                        <Col offset={2}>
-                            <Launchpad network={props.expectedNetwork}
-                                       account={walletContextState.account}
-                                       submitTransaction={walletContextState.signAndSubmitTransaction}/>
-                        </Col>
-                    </Row>
                     <Row align="middle">
                         <Col offset={2}>
                             <Marketplace network={props.expectedNetwork}
                                          account={walletContextState.account}
                                          submitTransaction={walletContextState.signAndSubmitTransaction}/>
-                        </Col>
-                    </Row>
-                    <Row align="middle">
-                        <Col offset={2}>
-                            <Transfer network={props.expectedNetwork}
-                                      account={walletContextState.account}
-                                      submitTransaction={walletContextState.signAndSubmitTransaction}/>
                         </Col>
                     </Row>
                 </Layout>

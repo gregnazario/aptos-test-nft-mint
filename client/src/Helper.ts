@@ -46,9 +46,10 @@ export const runTransaction = async <T extends Types.TransactionPayload>(txnCont
     return undefined;
 }
 
-export const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void) => {
+export const onStringChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: string) => string) | string)) => void): Promise<string> => {
     const val = event.target.value;
     setter(val);
+    return val;
 }
 
 export const onNumberChange = async (event: React.ChangeEvent<HTMLInputElement>, setter: (value: (((prevState: number) => number) | number)) => void) => {

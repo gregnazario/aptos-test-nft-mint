@@ -11,6 +11,8 @@ import {
 } from "./Helper";
 import {Network} from "aptos";
 import {ensureImageUri} from "./App";
+import {resolveToName} from "./pages/Wallet";
+import {Link} from "react-router-dom";
 
 export const MODULE_ADDRESS = "0x6de37368e31dff4580b211295198159ee6f98b42ffa93c5683bb955ca1be67e0";
 export const DEVNET_FEE_SCHEDULE = "0x96e6143a72d9cb40872972c241112ecb43cc0ca8aca376a940a182d620ccef1c";
@@ -45,8 +47,9 @@ function Marketplace(props: TransactionContext) {
     const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
     const [tokenStandard, setTokenStandard] = useState<string>(V2);
     const [type, setType] = useState<string>(FIXED_PRICE);
-    const [feeSchedule, setFeeSchedule] = useState<string>(defaultFeeSchedule(props.network));
+    const feeSchedule = defaultFeeSchedule(props.network);
     const [feeScheduleDetails, setFeeScheduleDetails] = useState<{
+        name: string
         error: string | null,
         fee_address: string,
         listing_fee: string,
@@ -68,8 +71,10 @@ function Marketplace(props: TransactionContext) {
             let listing_fee = await MARKETPLACE_HELPER.listingFee(feeSchedule);
             let bidding_fee = await MARKETPLACE_HELPER.biddingFee(feeSchedule);
             let commission = await MARKETPLACE_HELPER.commission(feeSchedule, BigInt(DEFAULT_PRICE));
+            let name = await resolveToName(fee_address.hex());
 
             setFeeScheduleDetails({
+                name,
                 error: null,
                 fee_address: fee_address.hex(),
                 listing_fee: listing_fee.toString(),
@@ -78,32 +83,13 @@ function Marketplace(props: TransactionContext) {
             })
         } catch (error: any) {
             setFeeScheduleDetails({
+                name: "",
                 error: `Failed to load fee schedule ${error}`,
                 fee_address: "",
                 listing_fee: "",
                 bidding_fee: "",
                 commission: ""
             })
-        }
-    }
-
-    const createFeeSchedule = async () => {
-        // Ensure you're logged in
-        if (!props.account) return [];
-
-        const payload = await MARKETPLACE_HELPER.initFeeSchedule(props.account.address, BigInt(0), BigInt(0), BigInt(100), BigInt(0));
-
-        let txn = await runTransaction(props, payload);
-        if (txn !== undefined) {
-            let address = "unknown";
-            for (let change of txn.changes) {
-                if (change.data.type === "0x1::object::ObjectCore") {
-                    address = change.address;
-                    break;
-                }
-            }
-            // TODO: Show in UI
-            console.log(`New fee schedule ${address}`);
         }
     }
 
@@ -115,69 +101,39 @@ function Marketplace(props: TransactionContext) {
         <>
             <Row align="middle">
                 <Col flex={"auto"}>
-                    <h1>Marketplace contract address {MODULE_ADDRESS}</h1>
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col flex={"auto"}>
-                    <h1>Deploy marketplace fee schedule</h1>
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col flex={"auto"}>
-                    <p>Fee schedule address: </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onStringChange(event, setFeeSchedule)
-                        }}
-                        placeholder="Fee schedule address"
-                        size="large"
-                        defaultValue={defaultFeeSchedule(props.network)}
-                    />
-                    <Button
-                        onClick={() => loadFeeSchedule()}
-                        type="primary"
-                        style={{height: "40px", backgroundColor: "#3f67ff"}}
-                    >
-                        Lookup an existing fee schedule
-                    </Button>
-                </Col>
-            </Row>
-            {feeScheduleDetails && !feeScheduleDetails.error && <Row align="middle">
-                <Col flex={"auto"}>
-                    <p>Fee schedule details:</p>
-                    <ol>
-                        <li>{`Fees are sent to ${feeScheduleDetails?.fee_address}`}</li>
-                        <li>{`List fee is ${toApt(feeScheduleDetails?.listing_fee)} APT`}</li>
-                        <li>{`Bid fee is ${toApt(feeScheduleDetails?.bidding_fee)} APT`}</li>
-                        <li>{`Commission on ${toApt(DEFAULT_PRICE)} APT is ${toApt(feeScheduleDetails?.commission)} APT`}</li>
-                    </ol>
-                </Col>
-            </Row>}
-            {feeScheduleDetails && feeScheduleDetails.error && <Row align="middle">
-                <Col flex={"auto"}>
-                    <Alert type="error" message={`Failed to load fee schedule ${feeScheduleDetails.error}`}/>
-                </Col>
-            </Row>}
-            <Row align="middle">
-                <Col flex={"auto"}>
-                    <Button
-                        onClick={() => createFeeSchedule()}
-                        type="primary"
-                        style={{height: "40px", backgroundColor: "#3f67ff"}}
-                    >
-                        Create Fee schedule for marketplace (at your address)
-                    </Button>
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col flex={"auto"}>
                     <Row align="middle">
-                        <h1>NFT Marketplace</h1>
+                        <Col>
+                            <h1>NFT Marketplace</h1>
+                        </Col>
+                        <Col offset={1}>
+                            <Link
+                                to={`https://explorer.aptoslabs.com/account/${MODULE_ADDRESS}/modules/code/coin_listing?network=${props.network}`}>Code</Link>
+                        </Col>
                     </Row>
-                    <Row>
+                    {feeScheduleDetails && !feeScheduleDetails.error && <Row align="middle">
+                        <Col flex={"auto"}>
+                            {feeScheduleDetails?.listing_fee === "0" && feeScheduleDetails?.bidding_fee === "0" && feeScheduleDetails?.commission === "0" &&
+                                <Alert type="info" message={`Zero fees!`}/>
+                            }
+                            {(feeScheduleDetails?.listing_fee !== "0" || feeScheduleDetails?.bidding_fee !== "0" || feeScheduleDetails?.commission !== "0") &&
+                                <>
+                                    <h2>Fees associated:</h2>
+                                    <ul>
+                                        <li>{`Fees are sent to ${feeScheduleDetails?.name}`}</li>
+                                        <li>{`List fee is ${toApt(feeScheduleDetails?.listing_fee)} APT per listing`}</li>
+                                        <li>{`Bid fee is ${toApt(feeScheduleDetails?.bidding_fee)} APT per listing`}</li>
+                                        <li>{`Commission per ${toApt(DEFAULT_PRICE)} APT is ${toApt(feeScheduleDetails?.commission)} APT`}</li>
+                                        <li>Royalties are as specified by the token creator</li>
+                                    </ul>
+                                </>}
+                        </Col>
+                    </Row>}
+                    {feeScheduleDetails && feeScheduleDetails.error && <Row align="middle">
+                        <Col flex={"auto"}>
+                            <Alert type="error" message={`Failed to load fee schedule ${feeScheduleDetails.error}`}/>
+                        </Col>
+                    </Row>}
+                    <Row align="middle">
                         <Col>
                             <Select
                                 defaultValue={V2}
@@ -271,8 +227,8 @@ function V1FixedListing(props: TransactionContext) {
     const [creatorAddress, setCreatorAddress] = useState<string>("");
     const [tokenPropertyVersion, setTokenPropertyVersion] = useState<number>(0);
 
-    const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>(defaultFeeSchedule(props.network));
     const [listingPrice, setListingPrice] = useState<string>(DEFAULT_PRICE);
+    const feeScheduleAddress = defaultFeeSchedule(props.network);
 
     const createV1Listing = async () => {
         // Ensure you're logged in
@@ -372,21 +328,6 @@ function V1FixedListing(props: TransactionContext) {
             </Row>
             <Row align="middle">
                 <Col span={4}>
-                    <p>Fee schedule address: </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onStringChange(event, setFeeScheduleAddress)
-                        }}
-                        placeholder="Fee Schedule Address"
-                        size="large"
-                        defaultValue={defaultFeeSchedule(props.network)}
-                    />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={4}>
                     <p>Price(Octas): </p>
                 </Col>
                 <Col flex={"auto"}>
@@ -433,7 +374,7 @@ function V1AuctionListing(props: TransactionContext) {
     const [tokenPropertyVersion, setTokenPropertyVersion] = useState<number>(0);
     const [auctionDuration, setAuctionDuration] = useState<number>(3600);
 
-    const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>(defaultFeeSchedule(props.network));
+    const feeScheduleAddress = defaultFeeSchedule(props.network);
     const [listingPrice, setListingPrice] = useState<string>(DEFAULT_PRICE);
 
     const createV1AuctionListing = async () => {
@@ -540,21 +481,6 @@ function V1AuctionListing(props: TransactionContext) {
             </Row>
             <Row align="middle">
                 <Col span={4}>
-                    <p>Fee schedule address: </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onStringChange(event, setFeeScheduleAddress)
-                        }}
-                        placeholder="Fee Schedule Address"
-                        size="large"
-                        defaultValue={defaultFeeSchedule(props.network)}
-                    />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={4}>
                     <p>Price(Octas): </p>
                 </Col>
                 <Col flex={"auto"}>
@@ -612,7 +538,7 @@ function V2FixedListing(props: TransactionContext) {
     const [message, setMessage] = useState<String>("");
     const [tokenAddress, setTokenAddress] = useState<string>("");
 
-    const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>(defaultFeeSchedule(props.network));
+    const feeScheduleAddress = defaultFeeSchedule(props.network);
     const [listingPrice, setListingPrice] = useState<string>(DEFAULT_PRICE);
 
     const createV2Listing = async () => {
@@ -644,11 +570,11 @@ function V2FixedListing(props: TransactionContext) {
         <>
             <Row align="middle">
                 <Col flex={"auto"}>
-                    <h3>V2 Fixed Listing</h3>
+                    <h3>V2 Fixed Price</h3>
                 </Col>
             </Row>
             <Row align="middle">
-                <Col span={4}>
+                <Col span={8}>
                     <p>Token address: </p>
                 </Col>
                 <Col flex={"auto"}>
@@ -663,22 +589,7 @@ function V2FixedListing(props: TransactionContext) {
                 </Col>
             </Row>
             <Row align="middle">
-                <Col span={4}>
-                    <p>Fee schedule address: </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onStringChange(event, setFeeScheduleAddress)
-                        }}
-                        placeholder="Fee Schedule Address"
-                        size="large"
-                        defaultValue={defaultFeeSchedule(props.network)}
-                    />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={4}>
+                <Col span={8}>
                     <p>Price(Octas): </p>
                 </Col>
                 <Col flex={"auto"}>
@@ -699,7 +610,7 @@ function V2FixedListing(props: TransactionContext) {
                         type="primary"
                         style={{height: "40px", backgroundColor: "#3f67ff"}}
                     >
-                        Create V2 Fixed Listing
+                        Create V2 Fixed Price Listing
                     </Button>
                 </Col>
             </Row>
@@ -721,7 +632,7 @@ function V2AuctionListing(props: TransactionContext) {
     const [tokenAddress, setTokenAddress] = useState<string>("");
     const [auctionDuration, setAuctionDuration] = useState<number>(3600);
 
-    const [feeScheduleAddress, setFeeScheduleAddress] = useState<string>(defaultFeeSchedule(props.network));
+    const feeScheduleAddress = defaultFeeSchedule(props.network);
     const [listingPrice, setListingPrice] = useState<string>(DEFAULT_PRICE);
 
     const createV2AuctionListing = async () => {
@@ -775,21 +686,6 @@ function V2AuctionListing(props: TransactionContext) {
                         placeholder="Token Address"
                         size="large"
                         defaultValue={""}
-                    />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={4}>
-                    <p>Fee schedule address: </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onStringChange(event, setFeeScheduleAddress)
-                        }}
-                        placeholder="Fee Schedule Address"
-                        size="large"
-                        defaultValue={defaultFeeSchedule(props.network)}
                     />
                 </Col>
             </Row>
@@ -1246,9 +1142,9 @@ function AuctionListings(props: { ctx: TransactionContext, feeSchedule: string }
 function V2TokenOffers(props: TransactionContext) {
     const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
     const [tokenAddress, setTokenAddress] = useState<string>("");
-    const [feeSchedule, setFeeSchedule] = useState<string>(defaultFeeSchedule(props.network));
     const [price, setPrice] = useState<bigint>(BigInt(DEFAULT_PRICE));
     const [expirationSecs, setExpirationSecs] = useState<bigint>(BigInt(3600));
+    const feeSchedule = defaultFeeSchedule(props.network);
 
     const createTokenOffer = async () => {
         // Ensure you're logged in
@@ -1262,22 +1158,6 @@ function V2TokenOffers(props: TransactionContext) {
         <>
             <Row align="middle">
                 <h3>Token Offers</h3>
-            </Row>
-            <Row align="middle">
-                <Col span={4}>
-                    <p>Fee Schedule: </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onStringChange(event, setFeeSchedule)
-                        }}
-                        style={{width: "calc(100% - 60px)"}}
-                        placeholder="FeeSchedule"
-                        size="large"
-                        defaultValue={defaultFeeSchedule(props.network)}
-                    />
-                </Col>
             </Row>
             <Row align="middle">
                 <Col span={4}>
@@ -1345,7 +1225,7 @@ function V2TokenOffers(props: TransactionContext) {
 function V2CollectionOffers(props: TransactionContext) {
     const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
     const [collectionAddress, setCollectionAddress] = useState<string>("");
-    const [feeSchedule, setFeeSchedule] = useState<string>(defaultFeeSchedule(props.network));
+    const feeSchedule = defaultFeeSchedule(props.network);
     const [price, setPrice] = useState<bigint>(BigInt(DEFAULT_PRICE));
     const [amount, setAmount] = useState<bigint>(BigInt(1));
     const [expirationSecs, setExpirationSecs] = useState<bigint>(BigInt(3600));
@@ -1362,22 +1242,6 @@ function V2CollectionOffers(props: TransactionContext) {
         <>
             <Row align="middle">
                 <h3>Collection Offers</h3>
-            </Row>
-            <Row align="middle">
-                <Col span={4}>
-                    <p>Fee Schedule: </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onStringChange(event, setFeeSchedule)
-                        }}
-                        style={{width: "calc(100% - 60px)"}}
-                        placeholder="FeeSchedule"
-                        size="large"
-                        defaultValue={defaultFeeSchedule(props.network)}
-                    />
-                </Col>
             </Row>
             <Row align="middle">
                 <Col span={4}>
