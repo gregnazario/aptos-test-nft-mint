@@ -1,4 +1,4 @@
-import {Alert, Button, Col, Image, Input, Row, Select} from "antd";
+import {Alert, Button, Col, Image, Input, Layout, Row, Select} from "antd";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
 import React, {useState} from "react";
 import {onNumberChange, onStringChange, runTransaction} from "../Helper";
@@ -151,7 +151,7 @@ function Launchpad(props: { expectedNetwork: Network }) {
                     message={`Wallet is connected to ${network?.name}.  Please connect to ${props.expectedNetwork}`}
                     type="warning"/>
             }
-            {connected && isSelectedNetwork() && <>
+            {connected && isSelectedNetwork() && <Layout>
                 <Row align="middle">
                     <Col offset={2} span={2}>
                         <h2>Launchpad</h2>
@@ -313,7 +313,7 @@ function Launchpad(props: { expectedNetwork: Network }) {
                         </Button>
                     </Col>
                 </Row>}
-            </>}
+            </Layout>}
         </>
     );
 }
