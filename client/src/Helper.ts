@@ -5,12 +5,7 @@ import {AccountInfo} from "@aptos-labs/wallet-adapter-core";
  * A helper central place for common code across components
  */
 
-// TODO: Support multiple networks
-export const DEVNET_PROVIDER = new Provider({
-    fullnodeUrl: "https://fullnode.devnet.aptoslabs.com",
-    indexerUrl: "https://ideal-cricket-94.hasura.app/v1/graphql"
-})
-
+export const DEVNET_PROVIDER = new Provider(Network.DEVNET);
 export const TESTNET_PROVIDER = new Provider(Network.TESTNET);
 export const MAINNET_PROVIDER = new Provider(Network.MAINNET);
 

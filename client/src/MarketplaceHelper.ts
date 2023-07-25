@@ -342,7 +342,19 @@ export class Marketplace {
     }
 
     bidAuctionListing(
-        bidder: MaybeHexString,
+        listing: MaybeHexString,
+        bid_amount: bigint,
+        coin: string = APTOS_COIN,
+    ): TransactionPayload {
+        return this.buildTransactionPayload(
+            COIN_LISTING,
+            "bid",
+            [coin],
+            [HexString.ensure(listing).hex(), bid_amount.toString(10)],
+        );
+    }
+
+    buyNowAuctionListing(
         listing: MaybeHexString,
         bid_amount: bigint,
         coin: string = APTOS_COIN,

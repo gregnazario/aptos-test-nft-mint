@@ -1,6 +1,6 @@
-import {Alert, Button, Col, Image, Input, Row, Select, Tooltip} from "antd";
+import {Alert, Button, Col, Collapse, CollapseProps, Image, Input, Row, Select, Tooltip} from "antd";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
-import {useEffect, useState} from "react";
+import {Fragment, useEffect, useState} from "react";
 import {Listing, Marketplace as Helper, TokenOffer} from "./MarketplaceHelper"
 import {
     onStringChange,
@@ -24,14 +24,14 @@ export const DEFAULT_PROPERTY_VERSION = 0;
 export const DEFAULT_PRICE = "100000000";
 
 const APT = 100000000;
-const V1 = "V1";
-const V2 = "V2";
-const FIXED_PRICE = "Fixed Price";
-const AUCTION = "Auction";
-const TOKEN_OFFERS = "Token Offers";
-const COLLECTION_OFFERS = "Collection Offers";
+export const V1 = "V1";
+export const V2 = "V2";
+export const FIXED_PRICE = "Fixed Price";
+export const AUCTION = "Auction";
+export const TOKEN_OFFERS = "Token Offers";
+export const COLLECTION_OFFERS = "Collection Offers";
 
-const defaultFeeSchedule = (network: Network) => {
+export const defaultFeeSchedule = (network: Network) => {
     if (network === Network.MAINNET) {
         return MAINNET_ZERO_FEE_SCHEDULE;
     } else if (network === Network.TESTNET) {
@@ -93,127 +93,120 @@ function Marketplace(props: TransactionContext) {
         }
     }
 
-    const toApt = (num: string): number => {
-        return Number(num) / APT
-    }
 
     return (
         <>
             <Row align="middle">
-                <Col flex={"auto"}>
-                    <Row align="middle">
-                        <Col>
-                            <h1>NFT Marketplace</h1>
-                        </Col>
-                        <Col offset={1}>
-                            <Link
-                                to={`https://explorer.aptoslabs.com/account/${MODULE_ADDRESS}/modules/code/coin_listing?network=${props.network}`}>Code</Link>
-                        </Col>
-                    </Row>
-                    {feeScheduleDetails && !feeScheduleDetails.error && <Row align="middle">
-                        <Col flex={"auto"}>
-                            {feeScheduleDetails?.listing_fee === "0" && feeScheduleDetails?.bidding_fee === "0" && feeScheduleDetails?.commission === "0" &&
-                                <Alert type="info" message={`Zero fees!`}/>
-                            }
-                            {(feeScheduleDetails?.listing_fee !== "0" || feeScheduleDetails?.bidding_fee !== "0" || feeScheduleDetails?.commission !== "0") &&
-                                <>
-                                    <h2>Fees associated:</h2>
-                                    <ul>
-                                        <li>{`Fees are sent to ${feeScheduleDetails?.name}`}</li>
-                                        <li>{`List fee is ${toApt(feeScheduleDetails?.listing_fee)} APT per listing`}</li>
-                                        <li>{`Bid fee is ${toApt(feeScheduleDetails?.bidding_fee)} APT per listing`}</li>
-                                        <li>{`Commission per ${toApt(DEFAULT_PRICE)} APT is ${toApt(feeScheduleDetails?.commission)} APT`}</li>
-                                        <li>Royalties are as specified by the token creator</li>
-                                    </ul>
-                                </>}
-                        </Col>
-                    </Row>}
-                    {feeScheduleDetails && feeScheduleDetails.error && <Row align="middle">
-                        <Col flex={"auto"}>
-                            <Alert type="error" message={`Failed to load fee schedule ${feeScheduleDetails.error}`}/>
-                        </Col>
-                    </Row>}
-                    <Row align="middle">
-                        <Col>
-                            <Select
-                                defaultValue={V2}
-                                style={{width: 120}}
-                                onChange={setTokenStandard}
-                                options={[
-                                    {value: V1, label: V1},
-                                    {value: V2, label: V2},
-                                ]}
-                            />
-                        </Col>
-                        <Col>
-                            <Select
-                                defaultValue={FIXED_PRICE}
-                                onChange={setType}
-                                options={[
-                                    {value: FIXED_PRICE, label: FIXED_PRICE},
-                                    {value: AUCTION, label: AUCTION},
-                                    {value: TOKEN_OFFERS, label: TOKEN_OFFERS},
-                                    {value: COLLECTION_OFFERS, label: COLLECTION_OFFERS},
-                                ]}
-                            />
-                        </Col>
-                    </Row>
-
-                    <Row align="middle">
-                        <Col>
-                            <h2>Listing NFTs</h2>
-                        </Col>
-                    </Row>
-                    {tokenStandard === V1 && type === FIXED_PRICE &&
-                        <V1FixedListing network={props.network} account={props.account}
-                                        submitTransaction={props.submitTransaction}/>}
-                    {tokenStandard === V1 && type === AUCTION &&
-                        <V1AuctionListing network={props.network} account={props.account}
-                                          submitTransaction={props.submitTransaction}/>}
-                    {tokenStandard === V1 && type === TOKEN_OFFERS && <Alert type="error" message="Not implemented"/>}
-                    {tokenStandard === V1 && type === COLLECTION_OFFERS &&
-                        <Alert type="error" message="Not implemented"/>}
-                    {tokenStandard === V2 && type === FIXED_PRICE &&
-                        <V2FixedListing network={props.network} account={props.account}
-                                        submitTransaction={props.submitTransaction}/>}
-                    {tokenStandard === V2 && type === AUCTION &&
-                        <V2AuctionListing network={props.network} account={props.account}
-                                          submitTransaction={props.submitTransaction}/>}
-                    {tokenStandard === V2 && type === TOKEN_OFFERS &&
-                        <V2TokenOffers network={props.network} account={props.account}
-                                       submitTransaction={props.submitTransaction}/>}
-                    {tokenStandard === V2 && type === COLLECTION_OFFERS &&
-                        <V2CollectionOffers network={props.network} account={props.account}
-                                            submitTransaction={props.submitTransaction}/>}
-                    <Row align="middle">
-                        <Col>
-                            <h2>Interacting with Listings</h2>
-                        </Col>
-                    </Row>
-                    {type === AUCTION &&
-                        <AuctionListingManagement network={props.network} account={props.account}
-                                                  submitTransaction={props.submitTransaction}/>}
-                    {tokenStandard === V1 &&
-                        <ExtractTokenV1 network={props.network} account={props.account}
-                                        submitTransaction={props.submitTransaction}/>}
-                    {(type === FIXED_PRICE) &&
-                        <Listings ctx={{
-                            network: props.network, account: props.account,
-                            submitTransaction: props.submitTransaction,
-                        }} feeSchedule={feeSchedule}/>}
-                    {(type === AUCTION) &&
-                        <AuctionListings ctx={{
-                            network: props.network, account: props.account,
-                            submitTransaction: props.submitTransaction,
-                        }} feeSchedule={feeSchedule}/>}
-                    {type === TOKEN_OFFERS &&
-                        <TokenOffers network={props.network} account={props.account}
-                                     submitTransaction={props.submitTransaction}/>}
-                    {type === COLLECTION_OFFERS &&
-                        <CollectionOffers network={props.network} account={props.account}
-                                          submitTransaction={props.submitTransaction}/>}
+                <Col>
+                    <h1>NFT Marketplace</h1>
+                </Col>
+                <Col offset={1}>
+                    <Link
+                        to={`https://explorer.aptoslabs.com/account/${MODULE_ADDRESS}/modules/code/coin_listing?network=${props.network}`}>Code</Link>
                 </Col>
             </Row>
+            {feeScheduleDetails && !feeScheduleDetails.error && <Row align="middle">
+                <Col flex={"auto"}>
+                    {feeScheduleDetails?.listing_fee === "0" && feeScheduleDetails?.bidding_fee === "0" && feeScheduleDetails?.commission === "0" &&
+                        <Alert type="info" message={`Zero fees! (Creator Royalties still apply)`}/>
+                    }
+                    {(feeScheduleDetails?.listing_fee !== "0" || feeScheduleDetails?.bidding_fee !== "0" || feeScheduleDetails?.commission !== "0") &&
+                        <>
+                            <h2>Fees associated:</h2>
+                            <ul>
+                                <li>{`Fees are sent to ${feeScheduleDetails?.name}`}</li>
+                                <li>{`List fee is ${toApt(feeScheduleDetails?.listing_fee)} APT per listing`}</li>
+                                <li>{`Bid fee is ${toApt(feeScheduleDetails?.bidding_fee)} APT per listing`}</li>
+                                <li>{`Commission per ${toApt(DEFAULT_PRICE)} APT is ${toApt(feeScheduleDetails?.commission)} APT`}</li>
+                                <li>Royalties are as specified by the token creator</li>
+                            </ul>
+                        </>}
+                </Col>
+            </Row>}
+            {feeScheduleDetails && feeScheduleDetails.error && <Row align="middle">
+                <Col flex={"auto"}>
+                    <Alert type="error" message={`Failed to load fee schedule ${feeScheduleDetails.error}`}/>
+                </Col>
+            </Row>}
+            <Row align="middle">
+                <Col>
+                    <Select
+                        defaultValue={V2}
+                        style={{width: 120}}
+                        onChange={setTokenStandard}
+                        options={[
+                            {value: V1, label: V1},
+                            {value: V2, label: V2},
+                        ]}
+                    />
+                </Col>
+                <Col>
+                    <Select
+                        defaultValue={FIXED_PRICE}
+                        onChange={setType}
+                        options={[
+                            {value: FIXED_PRICE, label: FIXED_PRICE},
+                            {value: AUCTION, label: AUCTION},
+                            {value: TOKEN_OFFERS, label: TOKEN_OFFERS},
+                            {value: COLLECTION_OFFERS, label: COLLECTION_OFFERS},
+                        ]}
+                    />
+                </Col>
+            </Row>
+
+            <Row align="middle">
+                <Col>
+                    <h2>Listing NFTs</h2>
+                </Col>
+            </Row>
+            {tokenStandard === V1 && type === FIXED_PRICE &&
+                <V1FixedListing network={props.network} account={props.account}
+                                submitTransaction={props.submitTransaction}/>}
+            {tokenStandard === V1 && type === AUCTION &&
+                <V1AuctionListing network={props.network} account={props.account}
+                                  submitTransaction={props.submitTransaction}/>}
+            {tokenStandard === V1 && type === TOKEN_OFFERS && <Alert type="error" message="Not implemented"/>}
+            {tokenStandard === V1 && type === COLLECTION_OFFERS &&
+                <Alert type="error" message="Not implemented"/>}
+            {tokenStandard === V2 && type === FIXED_PRICE &&
+                <V2FixedListing network={props.network} account={props.account}
+                                submitTransaction={props.submitTransaction}/>}
+            {tokenStandard === V2 && type === AUCTION &&
+                <V2AuctionListing network={props.network} account={props.account}
+                                  submitTransaction={props.submitTransaction}/>}
+            {tokenStandard === V2 && type === TOKEN_OFFERS &&
+                <V2TokenOffers network={props.network} account={props.account}
+                               submitTransaction={props.submitTransaction}/>}
+            {tokenStandard === V2 && type === COLLECTION_OFFERS &&
+                <V2CollectionOffers network={props.network} account={props.account}
+                                    submitTransaction={props.submitTransaction}/>}
+            <Row align="middle">
+                <Col>
+                    <h2>Interacting with Listings</h2>
+                </Col>
+            </Row>
+            {type === AUCTION &&
+                <AuctionListingManagement network={props.network} account={props.account}
+                                          submitTransaction={props.submitTransaction}/>}
+            {tokenStandard === V1 &&
+                <ExtractTokenV1 network={props.network} account={props.account}
+                                submitTransaction={props.submitTransaction}/>}
+            {(type === FIXED_PRICE) &&
+                <Listings ctx={{
+                    network: props.network, account: props.account,
+                    submitTransaction: props.submitTransaction,
+                }} feeSchedule={feeSchedule}/>}
+            {(type === AUCTION) &&
+                <AuctionListings ctx={{
+                    network: props.network, account: props.account,
+                    submitTransaction: props.submitTransaction,
+                }} feeSchedule={feeSchedule}/>}
+            {type === TOKEN_OFFERS &&
+                <TokenOffers network={props.network} account={props.account}
+                             submitTransaction={props.submitTransaction}/>}
+            {type === COLLECTION_OFFERS &&
+                <CollectionOffers network={props.network} account={props.account}
+                                  submitTransaction={props.submitTransaction}/>}
         </>
     );
 }
@@ -243,6 +236,8 @@ function V1FixedListing(props: TransactionContext) {
                 BigInt(Math.floor(new Date().getTime() / 1000)),
                 BigInt(listingPrice)
             );
+
+        console.log(`V1 LISTING payload: ${JSON.stringify(payload)}`);
 
         let txn = await runTransaction(props, payload);
         if (txn !== undefined) {
@@ -574,7 +569,7 @@ function V2FixedListing(props: TransactionContext) {
                 </Col>
             </Row>
             <Row align="middle">
-                <Col span={8}>
+                <Col span={2}>
                     <p>Token address: </p>
                 </Col>
                 <Col flex={"auto"}>
@@ -589,7 +584,7 @@ function V2FixedListing(props: TransactionContext) {
                 </Col>
             </Row>
             <Row align="middle">
-                <Col span={8}>
+                <Col span={2}>
                     <p>Price(Octas): </p>
                 </Col>
                 <Col flex={"auto"}>
@@ -604,7 +599,7 @@ function V2FixedListing(props: TransactionContext) {
                 </Col>
             </Row>
             <Row align="middle">
-                <Col span={6} offset={4}>
+                <Col span={2} offset={2}>
                     <Button
                         onClick={() => createV2Listing()}
                         type="primary"
@@ -617,7 +612,7 @@ function V2FixedListing(props: TransactionContext) {
             {
                 message &&
                 <Row align="middle">
-                    <Col span={6} offset={4}>
+                    <Col span={4} offset={2}>
                         <Alert type={"info"} message={message}/>
                     </Col>
                 </Row>
@@ -675,7 +670,7 @@ function V2AuctionListing(props: TransactionContext) {
                 </Col>
             </Row>
             <Row align="middle">
-                <Col span={4}>
+                <Col span={2}>
                     <p>Token address: </p>
                 </Col>
                 <Col flex={"auto"}>
@@ -690,7 +685,7 @@ function V2AuctionListing(props: TransactionContext) {
                 </Col>
             </Row>
             <Row align="middle">
-                <Col span={4}>
+                <Col span={2}>
                     <p>Price(Octas): </p>
                 </Col>
                 <Col flex={"auto"}>
@@ -705,7 +700,7 @@ function V2AuctionListing(props: TransactionContext) {
                 </Col>
             </Row>
             <Row align="middle">
-                <Col span={4}>
+                <Col span={2}>
                     <p>Auction Duration (seconds): </p>
                 </Col>
                 <Col flex={"auto"}>
@@ -720,7 +715,7 @@ function V2AuctionListing(props: TransactionContext) {
                 </Col>
             </Row>
             <Row align="middle">
-                <Col span={6} offset={4}>
+                <Col span={4} offset={2}>
                     <Button
                         onClick={() => createV2AuctionListing()}
                         type="primary"
@@ -733,7 +728,7 @@ function V2AuctionListing(props: TransactionContext) {
             {
                 message &&
                 <Row align="middle">
-                    <Col span={6} offset={4}>
+                    <Col span={4} offset={2}>
                         <Alert type={"info"} message={message}/>
                     </Col>
                 </Row>
@@ -757,7 +752,7 @@ function AuctionListingManagement(props: TransactionContext) {
     const bidAuction = async () => {
         // Ensure you're logged in
         if (!props.account || !listingAddress) return [];
-        const payload = await MARKETPLACE_HELPER.bidAuctionListing(props.account.address, listingAddress, bidAmount);
+        const payload = await MARKETPLACE_HELPER.bidAuctionListing(listingAddress, bidAmount);
         await runTransaction(props, payload);
     }
 
@@ -774,7 +769,7 @@ function AuctionListingManagement(props: TransactionContext) {
                 <h3>Auction Bids and Completion</h3>
             </Row>
             <Row align="middle">
-                <Col span={4}>
+                <Col span={2}>
                     <p>Listing address: </p>
                 </Col>
                 <Col flex={"auto"}>
@@ -790,7 +785,7 @@ function AuctionListingManagement(props: TransactionContext) {
                 </Col>
             </Row>
             <Row align="middle">
-                <Col span={4}>
+                <Col span={2}>
                     <p>Bid amount: </p>
                 </Col>
                 <Col flex={"auto"}>
@@ -806,7 +801,7 @@ function AuctionListingManagement(props: TransactionContext) {
                 </Col>
             </Row>
             <Row align="middle">
-                <Col span={2} offset={4}>
+                <Col span={2} offset={2}>
                     <Button
                         onClick={() => bidAuction()}
                         type="primary"
@@ -815,7 +810,7 @@ function AuctionListingManagement(props: TransactionContext) {
                         Buy Listing
                     </Button>
                 </Col>
-                <Col span={2} offset={4}>
+                <Col span={2} offset={2}>
                     <Button
                         onClick={() => buyNowAuction()}
                         type="primary"
@@ -911,6 +906,19 @@ function Listings(props: { ctx: TransactionContext, feeSchedule: string }) {
         }
     }
 
+    const items: CollapseProps['items'] = [
+        {
+            key: '1',
+            label: 'Manual Fixed Listing purchase',
+            children: <ListingActions ctx={props.ctx}/>,
+        },
+        {
+            key: '2',
+            label: 'Manual Auction Listing actions',
+            children: <AuctionActions ctx={props.ctx}/>,
+        },
+    ];
+
     return (
         <>
             <Row align="middle">
@@ -923,6 +931,12 @@ function Listings(props: { ctx: TransactionContext, feeSchedule: string }) {
                     })
                     }
                     {listingsError && <Alert type="error" message={listingsError}/>}
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col flex={"auto"}>
+                    <h3>Advanced Actions</h3>
+                    <Collapse accordion items={items}/>
                 </Col>
             </Row>
         </>
@@ -947,6 +961,7 @@ function ListingView(props: {
         const payload = await MARKETPLACE_HELPER.purchaseListing(listingAddress);
         await runTransaction(props.ctx, payload);
     }
+
 
     return <Row align="middle">
         <Col>
@@ -973,6 +988,57 @@ function ListingView(props: {
         <Col>
             {props.listing.seller === props.ctx.account?.address && <Button
                 onClick={() => cancelListing(props.listing.listing_id)}
+                type="primary"
+                style={{height: "40px", backgroundColor: "#3f67ff"}}
+            >
+                Cancel listing
+            </Button>}
+        </Col>
+    </Row>;
+}
+
+function ListingActions(
+    props: { ctx: TransactionContext }
+) {
+    const [listingId, setListingId] = useState<string>("");
+    const MARKETPLACE_HELPER = new Helper(getProvider(props.ctx.network), MODULE_ADDRESS);
+    const cancelListing = async (listingAddress: string) => {
+        // Ensure you're logged in
+        if (!props.ctx.account) return [];
+        const payload = await MARKETPLACE_HELPER.endFixedPriceListing(listingAddress);
+        await runTransaction(props.ctx, payload);
+    }
+
+    const purchaseListing = async (listingAddress: string) => {
+        // Ensure you're logged in
+        if (!props.ctx.account) return [];
+        const payload = await MARKETPLACE_HELPER.purchaseListing(listingAddress);
+        await runTransaction(props.ctx, payload);
+    }
+    return <Row align="middle">
+        <Col>
+            <Input
+                onChange={(event) => {
+                    onStringChange(event, setListingId)
+                }}
+                style={{width: "calc(100% - 60px)"}}
+                placeholder="ListingId"
+                size="large"
+                defaultValue={listingId}
+            />
+        </Col>
+        <Col>
+            <Button
+                onClick={() => purchaseListing(listingId)}
+                type="primary"
+                style={{height: "40px", backgroundColor: "#3f67ff"}}
+            >
+                Buy now
+            </Button>
+        </Col>
+        <Col>
+            {<Button
+                onClick={() => cancelListing(listingId)}
                 type="primary"
                 style={{height: "40px", backgroundColor: "#3f67ff"}}
             >
@@ -1137,6 +1203,95 @@ function AuctionListings(props: { ctx: TransactionContext, feeSchedule: string }
             </Row>
         </>
     );
+}
+
+function AuctionActions(
+    props: { ctx: TransactionContext }
+) {
+    const [listingId, setListingId] = useState<string>("");
+    const [bidAmount, setBidAmount] = useState<bigint>(BigInt(0));
+    const MARKETPLACE_HELPER = new Helper(getProvider(props.ctx.network), MODULE_ADDRESS);
+
+    const bidListing = async (listingAddress: string, bidAmount: bigint) => {
+        // Ensure you're logged in
+        if (!props.ctx.account) return [];
+        const payload = await MARKETPLACE_HELPER.bidAuctionListing(
+            listingAddress,
+            bidAmount
+        );
+        await runTransaction(props.ctx, payload);
+    }
+
+    const buyNowListing = async (listingAddress: string) => {
+        // Ensure you're logged in
+        if (!props.ctx.account) return [];
+        const payload = await MARKETPLACE_HELPER.purchaseListing(listingAddress);
+        await runTransaction(props.ctx, payload);
+    }
+    const completeListing = async (listingAddress: string) => {
+        // Ensure you're logged in
+        if (!props.ctx.account) return [];
+        const payload = await MARKETPLACE_HELPER.completeAuctionListing(listingAddress);
+        await runTransaction(props.ctx, payload);
+    }
+    return <>
+        <Row align="middle">
+            <Col>
+                <Input
+                    onChange={(event) => {
+                        onStringChange(event, setListingId)
+                    }}
+                    style={{width: "calc(100% - 60px)"}}
+                    placeholder="ListingId"
+                    size="large"
+                    defaultValue={listingId}
+                />
+            </Col>
+            <Row align="middle">
+                <Col span={6}>
+                    <p>Bid amount: </p>
+                </Col>
+                <Col flex={"auto"}>
+                    <Input
+                        onChange={(event) => {
+                            onBigIntChange(event, setBidAmount)
+                        }}
+                        style={{width: "calc(100% - 60px)"}}
+                        placeholder="Bid amount"
+                        size="large"
+                        defaultValue={0}
+                    />
+                </Col>
+            </Row>
+            <Col>
+                <Button
+                    onClick={() => bidListing(listingId, bidAmount)}
+                    type="primary"
+                    style={{height: "40px", backgroundColor: "#3f67ff"}}
+                >
+                    Bid
+                </Button>
+            </Col>
+            <Col>
+                <Button
+                    onClick={() => buyNowListing(listingId)}
+                    type="primary"
+                    style={{height: "40px", backgroundColor: "#3f67ff"}}
+                >
+                    Buy now
+                </Button>
+            </Col>
+            <Col>
+                {<Button
+                    onClick={() => completeListing(listingId)}
+                    type="primary"
+                    style={{height: "40px", backgroundColor: "#3f67ff"}}
+                >
+                    Complete Auction
+                </Button>}
+            </Col>
+        </Row>
+    </>;
 }
 
 function V2TokenOffers(props: TransactionContext) {
@@ -1528,5 +1683,8 @@ function CollectionOffers(props: TransactionContext) {
     );
 }
 
+export const toApt = (num: string): number => {
+    return Number(num) / APT
+}
 
 export default Marketplace;

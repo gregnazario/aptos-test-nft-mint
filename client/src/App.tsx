@@ -27,11 +27,12 @@ function App(props: { expectedNetwork: Network }) {
                 walletContextState.connected && isSelectedNetwork() &&
                 <Layout>
                     <Row align="middle">
-                        <Col offset={2}>
+                        <Col offset={2} flex={"auto"}>
                             <Marketplace network={props.expectedNetwork}
                                          account={walletContextState.account}
                                          submitTransaction={walletContextState.signAndSubmitTransaction}/>
                         </Col>
+                        <Col span={2}/>
                     </Row>
                 </Layout>
             }

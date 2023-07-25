@@ -235,11 +235,11 @@ export function NavBar(props: { expectedNetwork: string, current: string }) {
     const navigate = useNavigate();
     const onClick: MenuProps['onClick'] = (e) => {
         if (e.key === WALLET) {
-            navigate(`/wallet/${account?.address}`,)
+            navigate(`/wallet/${account?.address}?network=${props.expectedNetwork}`,)
         } else if (e.key === LAUNCHPAD) {
-            navigate(`/launchpad`,)
+            navigate(`/launchpad?network=${props.expectedNetwork}`,)
         } else if (e.key === MARKETPLACE) {
-            navigate(`/`,)
+            navigate(`/?network=${props.expectedNetwork}`,)
         } else if (e.key === CONTRACT) {
             window.location.href = "https://github.com/aptos-labs/aptos-core/tree/main/aptos-move/move-examples/marketplace"
         } else if (e.key === SOURCE) {
@@ -247,7 +247,7 @@ export function NavBar(props: { expectedNetwork: string, current: string }) {
         }
     };
 
-    return <> <Row align="middle">
+    return <><Row align="middle">
         <Col offset={2} span={16}>
             <h1>NFT Playground ({props.expectedNetwork})</h1>
         </Col>
