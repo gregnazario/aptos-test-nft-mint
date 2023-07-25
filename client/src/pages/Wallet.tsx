@@ -1,6 +1,6 @@
 import {Network} from "aptos";
 import React, {useEffect, useState} from "react";
-import {getProvider, onStringChange, runTransaction, TransactionContext} from "../Helper";
+import {getProvider, onStringChange, runTransaction, runViewFunction, TransactionContext} from "../Helper";
 import {
     Alert,
     Button,
@@ -17,6 +17,7 @@ import {
     Tooltip,
 } from "antd";
 import {ensureImageUri} from "../App";
+import {Transfer} from "../Transfer";
 import {useWallet} from "@aptos-labs/wallet-adapter-react";
 import {
     AUCTION,
@@ -269,16 +270,28 @@ function WalletItem(props: {
     ctx: TransactionContext | null,
 }) {
 
-    const [open, setOpen] = useState(false);
+    const [openListModal, setOpenListModal] = useState(false);
+    const [openTransferModal, setOpenTransferModal] = useState(false);
     const [confirmLoading, setConfirmLoading] = useState(false);
     const [listingType, setListingType] = useState(FIXED_PRICE);
     const [submitFixed, setSubmitFixed] = useState(false);
 
-    const showListModal = () => {
-        setOpen(true);
+    const showListModal = async () => {
+        if (!props.ctx) {
+            return
+        }
+        runViewFunction(props.ctx, {
+            function: "0x4::token::royalty",
+            type_arguments: ["0x4::aptos_token"],
+            arguments: [],
+        })
+        setOpenListModal(true);
+    };
+    const showTransferModal = () => {
+        setOpenTransferModal(true);
     };
 
-    const handleOk = () => {
+    const handleListOk = () => {
         setConfirmLoading(true);
         setSubmitFixed(true);
     };
@@ -286,13 +299,14 @@ function WalletItem(props: {
     const finishedCallback = () => {
         setSubmitFixed(false);
         setConfirmLoading(false);
-        setOpen(false);
+        setOpenTransferModal(false);
     };
 
     const handleCancel = () => {
         setSubmitFixed(false);
         setConfirmLoading(false);
-        setOpen(false);
+        setOpenListModal(false);
+        setOpenTransferModal(false);
     };
 
     return <Col span={2.5}>
@@ -339,8 +353,8 @@ function WalletItem(props: {
                 </Button>
                 <Modal
                     title={`List ${props.item.collection} : ${props.item.name}`}
-                    open={open}
-                    onOk={handleOk}
+                    open={openListModal}
+                    onOk={handleListOk}
                     confirmLoading={confirmLoading}
                     onCancel={handleCancel}
                 >
@@ -350,7 +364,7 @@ function WalletItem(props: {
                         onChange={setListingType}
                         options={[
                             {value: FIXED_PRICE, label: FIXED_PRICE},
-                            {value: AUCTION, label: AUCTION},
+                            {value: AUCTION, label: AUCTION, disabled: props.item.standard === V2},
                         ]}
                     />
                     {props.item.standard === V1 && listingType === FIXED_PRICE &&
@@ -368,20 +382,40 @@ function WalletItem(props: {
             </Col>
             <Col flex={"auto"}>
                 <Button
-                    onClick={() => {
-                    }}
+                    onClick={showTransferModal}
                     type="primary"
                     style={{height: "40px", backgroundColor: "#3f67ff"}}
-                    disabled={true}
+                    disabled={props.item.standard === V1}
                 >
                     Transfer
                 </Button>
+                <Modal
+                    title={`Transfer ${props.item.collection} : ${props.item.name}`}
+                    open={openTransferModal}
+                    onOk={handleListOk}
+                    confirmLoading={confirmLoading}
+                    onCancel={handleCancel}
+                >
+                    {props.item.standard === V1 &&
+                        <Alert type={"warning"}
+                               message={"Transfer currently not supported for V1, please use your wallet to transfer"}/>}
+                    {props.item.standard === V2 && <Transfer ctx={props.ctx} objectAddress={props.item.data_id}/>}
+                </Modal>
             </Col>
         </Row>}
-    </Col>;
+    </Col>
+        ;
 }
 
-function V1FixedListing(props: { ctx: TransactionContext, item: Token, submit: boolean, submitCallback: () => void }) {
+function V1FixedListing(props: {
+    ctx: TransactionContext, item
+        :
+        Token, submit
+        :
+        boolean, submitCallback
+        :
+        () => void
+}) {
     const MARKETPLACE_HELPER = new Helper(getProvider(props.ctx.network), MODULE_ADDRESS);
 
     const [listingPrice, setListingPrice] = useState<string>(DEFAULT_PRICE);
@@ -453,9 +487,15 @@ function V1FixedListing(props: { ctx: TransactionContext, item: Token, submit: b
 
 function V1AuctionListing(props: {
     ctx: TransactionContext,
-    item: Token,
-    submit: boolean,
-    submitCallback: () => void
+    item
+        :
+        Token,
+    submit
+        :
+        boolean,
+    submitCallback
+        :
+        () => void
 }) {
     const MARKETPLACE_HELPER = new Helper(getProvider(props.ctx.network), MODULE_ADDRESS);
 
@@ -581,7 +621,15 @@ function V1AuctionListing(props: {
         ;
 }
 
-function V2FixedListing(props: { ctx: TransactionContext, item: Token, submit: boolean, submitCallback: () => void }) {
+function V2FixedListing(props: {
+    ctx: TransactionContext, item
+        :
+        Token, submit
+        :
+        boolean, submitCallback
+        :
+        () => void
+}) {
     const MARKETPLACE_HELPER = new Helper(getProvider(props.ctx.network), MODULE_ADDRESS);
 
     const [listingPrice, setListingPrice] = useState<string>(DEFAULT_PRICE);

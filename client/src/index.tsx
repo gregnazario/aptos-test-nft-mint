@@ -247,20 +247,19 @@ export function NavBar(props: { expectedNetwork: string, current: string }) {
         }
     };
 
-    return <><Row align="middle">
-        <Col offset={2} span={16}>
+    return <Row align={"middle"}>
+        <Col offset={2} span={6}>
             <h1>NFT Playground ({props.expectedNetwork})</h1>
         </Col>
-    </Row>
-        <Row align={"middle"}>
-            <Col offset={2} span={16}>
-                <Menu onClick={onClick} selectedKeys={[props.current]} mode="horizontal" items={items}/>
-            </Col>
-            <Col offset={2} span={2}>
-                <WalletSelector/>
-            </Col>
-        </Row>
-    </>;
+        <Col span={8}>
+            <Menu onClick={onClick} selectedKeys={[props.current]} mode="horizontal" items={items}/>
+        </Col>
+        <Col flex={"auto"}/>
+        <Col offset={2} span={2}>
+            <WalletSelector/>
+        </Col>
+        <Col span={2}/>
+    </Row>;
 }
 
 const LAUNCHPAD = "launchpad";

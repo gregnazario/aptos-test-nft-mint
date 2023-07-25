@@ -95,120 +95,126 @@ function Marketplace(props: TransactionContext) {
 
 
     return (
-        <>
-            <Row align="middle">
-                <Col>
-                    <h1>NFT Marketplace</h1>
-                </Col>
-                <Col offset={1}>
-                    <Link
-                        to={`https://explorer.aptoslabs.com/account/${MODULE_ADDRESS}/modules/code/coin_listing?network=${props.network}`}>Code</Link>
-                </Col>
-            </Row>
-            {feeScheduleDetails && !feeScheduleDetails.error && <Row align="middle">
-                <Col flex={"auto"}>
-                    {feeScheduleDetails?.listing_fee === "0" && feeScheduleDetails?.bidding_fee === "0" && feeScheduleDetails?.commission === "0" &&
-                        <Alert type="info" message={`Zero fees! (Creator Royalties still apply)`}/>
-                    }
-                    {(feeScheduleDetails?.listing_fee !== "0" || feeScheduleDetails?.bidding_fee !== "0" || feeScheduleDetails?.commission !== "0") &&
-                        <>
-                            <h2>Fees associated:</h2>
-                            <ul>
-                                <li>{`Fees are sent to ${feeScheduleDetails?.name}`}</li>
-                                <li>{`List fee is ${toApt(feeScheduleDetails?.listing_fee)} APT per listing`}</li>
-                                <li>{`Bid fee is ${toApt(feeScheduleDetails?.bidding_fee)} APT per listing`}</li>
-                                <li>{`Commission per ${toApt(DEFAULT_PRICE)} APT is ${toApt(feeScheduleDetails?.commission)} APT`}</li>
-                                <li>Royalties are as specified by the token creator</li>
-                            </ul>
-                        </>}
-                </Col>
-            </Row>}
-            {feeScheduleDetails && feeScheduleDetails.error && <Row align="middle">
-                <Col flex={"auto"}>
-                    <Alert type="error" message={`Failed to load fee schedule ${feeScheduleDetails.error}`}/>
-                </Col>
-            </Row>}
-            <Row align="middle">
-                <Col>
-                    <Select
-                        defaultValue={V2}
-                        style={{width: 120}}
-                        onChange={setTokenStandard}
-                        options={[
-                            {value: V1, label: V1},
-                            {value: V2, label: V2},
-                        ]}
-                    />
-                </Col>
-                <Col>
-                    <Select
-                        defaultValue={FIXED_PRICE}
-                        onChange={setType}
-                        options={[
-                            {value: FIXED_PRICE, label: FIXED_PRICE},
-                            {value: AUCTION, label: AUCTION},
-                            {value: TOKEN_OFFERS, label: TOKEN_OFFERS},
-                            {value: COLLECTION_OFFERS, label: COLLECTION_OFFERS},
-                        ]}
-                    />
-                </Col>
-            </Row>
+        <Row align="middle">
+            <Col offset={1} flex={"auto"}>
+                <Row align="middle">
+                    <Col>
+                        <h1>NFT Marketplace</h1>
+                    </Col>
+                    <Col offset={1}>
+                        <Link
+                            to={`https://explorer.aptoslabs.com/account/${MODULE_ADDRESS}/modules/code/coin_listing?network=${props.network}`}>Code</Link>
+                    </Col>
+                </Row>
+                {feeScheduleDetails && !feeScheduleDetails.error && <Row align="middle">
+                    <Col flex={"auto"}>
+                        {feeScheduleDetails?.listing_fee === "0" && feeScheduleDetails?.bidding_fee === "0" && feeScheduleDetails?.commission === "0" &&
+                            <Alert type="info" message={`Zero fees! (Creator Royalties still apply)`}/>
+                        }
+                        {(feeScheduleDetails?.listing_fee !== "0" || feeScheduleDetails?.bidding_fee !== "0" || feeScheduleDetails?.commission !== "0") &&
+                            <>
+                                <h2>Fees associated:</h2>
+                                <ul>
+                                    <li>{`Fees are sent to ${feeScheduleDetails?.name}`}</li>
+                                    <li>{`List fee is ${toApt(feeScheduleDetails?.listing_fee)} APT per listing`}</li>
+                                    <li>{`Bid fee is ${toApt(feeScheduleDetails?.bidding_fee)} APT per listing`}</li>
+                                    <li>{`Commission per ${toApt(DEFAULT_PRICE)} APT is ${toApt(feeScheduleDetails?.commission)} APT`}</li>
+                                    <li>Royalties are as specified by the token creator</li>
+                                </ul>
+                            </>}
+                    </Col>
+                </Row>}
+                {feeScheduleDetails && feeScheduleDetails.error && <Row align="middle">
+                    <Col flex={"auto"}>
+                        <Alert type="error" message={`Failed to load fee schedule ${feeScheduleDetails.error}`}/>
+                    </Col>
+                </Row>}
+                <Row align="middle">
+                    <Col>
+                        <Select
+                            defaultValue={V2}
+                            onChange={setTokenStandard}
+                            popupMatchSelectWidth={true}
+                            options={[
+                                {value: V1, label: V1, disabled: type === TOKEN_OFFERS || type === COLLECTION_OFFERS},
+                                {value: V2, label: V2},
+                            ]}
+                        />
+                    </Col>
+                    <Col>
+                        <Select
+                            defaultValue={FIXED_PRICE}
+                            onChange={setType}
+                            style={{width: 150}}
+                            popupMatchSelectWidth={true}
+                            options={[
+                                {value: FIXED_PRICE, label: FIXED_PRICE},
+                                {value: AUCTION, label: AUCTION},
+                                {value: TOKEN_OFFERS, label: TOKEN_OFFERS, disabled: tokenStandard === V1},
+                                {value: COLLECTION_OFFERS, label: COLLECTION_OFFERS, disabled: tokenStandard === V1},
+                            ]}
+                        />
+                    </Col>
+                </Row>
 
-            <Row align="middle">
-                <Col>
-                    <h2>Listing NFTs</h2>
-                </Col>
-            </Row>
-            {tokenStandard === V1 && type === FIXED_PRICE &&
-                <V1FixedListing network={props.network} account={props.account}
-                                submitTransaction={props.submitTransaction}/>}
-            {tokenStandard === V1 && type === AUCTION &&
-                <V1AuctionListing network={props.network} account={props.account}
-                                  submitTransaction={props.submitTransaction}/>}
-            {tokenStandard === V1 && type === TOKEN_OFFERS && <Alert type="error" message="Not implemented"/>}
-            {tokenStandard === V1 && type === COLLECTION_OFFERS &&
-                <Alert type="error" message="Not implemented"/>}
-            {tokenStandard === V2 && type === FIXED_PRICE &&
-                <V2FixedListing network={props.network} account={props.account}
-                                submitTransaction={props.submitTransaction}/>}
-            {tokenStandard === V2 && type === AUCTION &&
-                <V2AuctionListing network={props.network} account={props.account}
-                                  submitTransaction={props.submitTransaction}/>}
-            {tokenStandard === V2 && type === TOKEN_OFFERS &&
-                <V2TokenOffers network={props.network} account={props.account}
-                               submitTransaction={props.submitTransaction}/>}
-            {tokenStandard === V2 && type === COLLECTION_OFFERS &&
-                <V2CollectionOffers network={props.network} account={props.account}
+                <Row align="middle">
+                    <Col>
+                        <h2>Listing NFTs</h2>
+                    </Col>
+                </Row>
+                {tokenStandard === V1 && type === FIXED_PRICE &&
+                    <V1FixedListing network={props.network} account={props.account}
                                     submitTransaction={props.submitTransaction}/>}
-            <Row align="middle">
-                <Col>
-                    <h2>Interacting with Listings</h2>
-                </Col>
-            </Row>
-            {type === AUCTION &&
-                <AuctionListingManagement network={props.network} account={props.account}
-                                          submitTransaction={props.submitTransaction}/>}
-            {tokenStandard === V1 &&
-                <ExtractTokenV1 network={props.network} account={props.account}
-                                submitTransaction={props.submitTransaction}/>}
-            {(type === FIXED_PRICE) &&
-                <Listings ctx={{
-                    network: props.network, account: props.account,
-                    submitTransaction: props.submitTransaction,
-                }} feeSchedule={feeSchedule}/>}
-            {(type === AUCTION) &&
-                <AuctionListings ctx={{
-                    network: props.network, account: props.account,
-                    submitTransaction: props.submitTransaction,
-                }} feeSchedule={feeSchedule}/>}
-            {type === TOKEN_OFFERS &&
-                <TokenOffers network={props.network} account={props.account}
-                             submitTransaction={props.submitTransaction}/>}
-            {type === COLLECTION_OFFERS &&
-                <CollectionOffers network={props.network} account={props.account}
-                                  submitTransaction={props.submitTransaction}/>}
-        </>
-    );
+                {tokenStandard === V1 && type === AUCTION &&
+                    <V1AuctionListing network={props.network} account={props.account}
+                                      submitTransaction={props.submitTransaction}/>}
+                {tokenStandard === V1 && type === TOKEN_OFFERS && <Alert type="error" message="Not implemented"/>}
+                {tokenStandard === V1 && type === COLLECTION_OFFERS &&
+                    <Alert type="error" message="Not implemented"/>}
+                {tokenStandard === V2 && type === FIXED_PRICE &&
+                    <V2FixedListing network={props.network} account={props.account}
+                                    submitTransaction={props.submitTransaction}/>}
+                {tokenStandard === V2 && type === AUCTION &&
+                    <V2AuctionListing network={props.network} account={props.account}
+                                      submitTransaction={props.submitTransaction}/>}
+                {tokenStandard === V2 && type === TOKEN_OFFERS &&
+                    <V2TokenOffers network={props.network} account={props.account}
+                                   submitTransaction={props.submitTransaction}/>}
+                {tokenStandard === V2 && type === COLLECTION_OFFERS &&
+                    <V2CollectionOffers network={props.network} account={props.account}
+                                        submitTransaction={props.submitTransaction}/>}
+                <Row align="middle">
+                    <Col>
+                        <h2>Interacting with Listings</h2>
+                    </Col>
+                </Row>
+                {type === AUCTION &&
+                    <AuctionListingManagement network={props.network} account={props.account}
+                                              submitTransaction={props.submitTransaction}/>}
+                {tokenStandard === V1 &&
+                    <ExtractTokenV1 network={props.network} account={props.account}
+                                    submitTransaction={props.submitTransaction}/>}
+                {(type === FIXED_PRICE) &&
+                    <Listings ctx={{
+                        network: props.network, account: props.account,
+                        submitTransaction: props.submitTransaction,
+                    }} feeSchedule={feeSchedule}/>}
+                {(type === AUCTION) &&
+                    <AuctionListings ctx={{
+                        network: props.network, account: props.account,
+                        submitTransaction: props.submitTransaction,
+                    }} feeSchedule={feeSchedule}/>}
+                {type === TOKEN_OFFERS &&
+                    <TokenOffers network={props.network} account={props.account}
+                                 submitTransaction={props.submitTransaction}/>}
+                {type === COLLECTION_OFFERS &&
+                    <CollectionOffers network={props.network} account={props.account}
+                                      submitTransaction={props.submitTransaction}/>}
+            </Col>
+            <Col span={1}/>
+        </Row>
+    )
+        ;
 }
 
 function V1FixedListing(props: TransactionContext) {

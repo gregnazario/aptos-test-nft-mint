@@ -15,26 +15,40 @@ function App(props: { expectedNetwork: Network }) {
         <>
             {
                 !walletContextState.connected &&
-                <Alert message={`Please connect your wallet`} type="info"/>
-            }
-            {
-                walletContextState.connected && !isSelectedNetwork() &&
-                <Alert
-                    message={`Wallet is connected to ${walletContextState.network?.name}.  Please connect to ${props.expectedNetwork}`}
-                    type="warning"/>
-            }
-            {
-                walletContextState.connected && isSelectedNetwork() &&
                 <Layout>
                     <Row align="middle">
                         <Col offset={2} flex={"auto"}>
-                            <Marketplace network={props.expectedNetwork}
-                                         account={walletContextState.account}
-                                         submitTransaction={walletContextState.signAndSubmitTransaction}/>
+                            <Alert message={`Please connect your wallet`} type="info"/>
                         </Col>
                         <Col span={2}/>
                     </Row>
                 </Layout>
+            }
+            {
+                walletContextState.connected && !isSelectedNetwork() &&
+                <Row align="middle">
+                    <Col offset={2} flex={"auto"}>
+                        <Layout>
+                            <Alert
+                                message={`Wallet is connected to ${walletContextState.network?.name}.  Please connect to ${props.expectedNetwork}`}
+                                type="warning"/>
+                        </Layout>
+                    </Col>
+                    <Col span={2}/>
+                </Row>
+            }
+            {
+                walletContextState.connected && isSelectedNetwork() &&
+                <Row align="middle">
+                    <Col offset={2} flex={"auto"}>
+                        <Layout>
+                            <Marketplace network={props.expectedNetwork}
+                                         account={walletContextState.account}
+                                         submitTransaction={walletContextState.signAndSubmitTransaction}/>
+                        </Layout>
+                    </Col>
+                    <Col span={2}/>
+                </Row>
             }
         </>
     );

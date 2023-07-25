@@ -1,5 +1,5 @@
 import {Network, Provider, Types} from "aptos";
-import {AccountInfo} from "@aptos-labs/wallet-adapter-core";
+import {AccountInfo, TransactionOptions} from "@aptos-labs/wallet-adapter-core";
 
 /*
  * A helper central place for common code across components
@@ -14,7 +14,7 @@ export type TransactionContext = {
     account: AccountInfo | null,
     submitTransaction: SubmitTransaction
 };
-export type SubmitTransaction = <T extends Types.TransactionPayload, V>(transaction: T, options?: V) => Promise<any>;
+export type SubmitTransaction = <T extends Types.TransactionPayload>(transaction: T, options?: TransactionOptions) => Promise<any>;
 
 export const getProvider = (network: Network) => {
     if (network === Network.MAINNET) {
@@ -34,6 +34,30 @@ export const runTransaction = async <T extends Types.TransactionPayload>(txnCont
         await provider.aptosClient.waitForTransaction(response.hash);
         let txn = await provider.aptosClient.getTransactionByHash(response.hash) as any;
         return txn;
+    } catch (error: any) {
+        console.log("Failed to wait for txn" + error)
+    }
+
+    return undefined;
+}
+
+// FIXME: All of these should be exported from the SDK
+declare type ViewRequest = {
+    function: string;
+    /**
+     * Type arguments of the function
+     */
+    type_arguments: Array<string>;
+    /**
+     * Arguments of the function
+     */
+    arguments: Array<any>;
+};
+
+export const runViewFunction = async (txnContext: TransactionContext, payload: ViewRequest) => {
+    try {
+        const provider = getProvider(txnContext.network);
+        return await provider.aptosClient.view(payload);
     } catch (error: any) {
         console.log("Failed to wait for txn" + error)
     }

@@ -3,47 +3,25 @@ import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
 import {useState} from "react";
 import {onStringChange, runTransaction, TransactionContext} from "./Helper";
 
-function Transfer(props: TransactionContext) {
-    const [objectAddress, setObjectAddress] = useState<string>("");
+export function Transfer(props: { ctx: TransactionContext, objectAddress: string }) {
     const [destinationAddress, setDestinationAddress] = useState<string>("");
 
     const transferObject = async () => {
         // Ensure you're logged in
-        if (!props.account || !objectAddress) return [];
+        if (!props.ctx.account || !props.objectAddress) return [];
         const payload = {
             type: "entry_function_payload",
             function: `0x1::object::transfer`,
             type_arguments: ["0x1::object::ObjectCore"],
-            arguments: [objectAddress, destinationAddress],
+            arguments: [props.objectAddress, destinationAddress],
         };
-        await runTransaction(props, payload);
+        await runTransaction(props.ctx, payload);
     }
 
     return (
         <>
-            <Row align={"middle"}>
-                <Col span={4}>
-                    <h3>Transfer Object</h3>
-                </Col>
-            </Row>
             <Row align="middle">
-                <Col span={4}>
-                    <p>Object address: </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onStringChange(event, setObjectAddress)
-                        }}
-                        style={{width: "calc(100% - 60px)"}}
-                        placeholder="Object Address"
-                        size="large"
-                        defaultValue={""}
-                    />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={4}>
+                <Col span={6}>
                     <p>Destination address: </p>
                 </Col>
                 <Col flex={"auto"}>
@@ -72,5 +50,3 @@ function Transfer(props: TransactionContext) {
         </>
     );
 }
-
-export default Transfer;
