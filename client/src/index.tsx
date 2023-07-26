@@ -26,21 +26,29 @@ import {Wallet} from "./pages/Wallet";
 import {WalletSelector} from "@aptos-labs/wallet-adapter-ant-design";
 import Launchpad from "./pages/Launchpad";
 import {TokenDetails} from "./pages/Token";
+import {Buffer as BufferPolyFill} from 'buffer';
+import {IdentityConnectWallet} from "@identity-connect/wallet-adapter-plugin"
 
+const icDappId = '89016ba8-b4e1-4ddf-9c59-3b406b5b5e2a';
+
+window.Buffer = BufferPolyFill;
 
 const DEVNET_WALLETS = [
+    new IdentityConnectWallet(icDappId, NetworkName.Devnet),
+    new PetraWallet(),
     new FewchaWallet(),
     new MartianWallet(),
     new MSafeWalletAdapter(),
     new NightlyWallet(),
     new OpenBlockWallet(),
-    new PetraWallet(),
     new PontemWallet(),
     new RiseWallet(),
     new TokenPocketWallet(),
     new TrustWallet(),
     new WelldoneWallet()];
 const TESTNET_WALLETS = [
+    new IdentityConnectWallet(icDappId, NetworkName.Testnet),
+    new PetraWallet(),
     new BloctoWallet({
         network: NetworkName.Testnet,
         bloctoAppId: "6d85f56e-5f2e-46cd-b5f2-5cf9695b4d46",
@@ -50,13 +58,14 @@ const TESTNET_WALLETS = [
     new MSafeWalletAdapter(),
     new NightlyWallet(),
     new OpenBlockWallet(),
-    new PetraWallet(),
     new PontemWallet(),
     new RiseWallet(),
     new TokenPocketWallet(),
     new TrustWallet(),
     new WelldoneWallet()];
 const MAINNET_WALLETS = [
+    new IdentityConnectWallet(icDappId, NetworkName.Mainnet),
+    new PetraWallet(),
     new BloctoWallet({
         network: NetworkName.Mainnet,
         bloctoAppId: "6d85f56e-5f2e-46cd-b5f2-5cf9695b4d46",
@@ -66,7 +75,6 @@ const MAINNET_WALLETS = [
     new MSafeWalletAdapter(),
     new NightlyWallet(),
     new OpenBlockWallet(),
-    new PetraWallet(),
     new PontemWallet(),
     new RiseWallet(),
     new TokenPocketWallet(),
