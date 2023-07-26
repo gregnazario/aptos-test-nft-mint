@@ -155,27 +155,9 @@ function Marketplace(props: TransactionContext) {
                     />
                 </Col>
             </Row>
-
-            <Row align="middle">
-                <Col>
-                    <h2>Listing NFTs</h2>
-                </Col>
-            </Row>
-            {tokenStandard === V1 && type === FIXED_PRICE &&
-                <V1FixedListing network={props.network} account={props.account}
-                                submitTransaction={props.submitTransaction}/>}
-            {tokenStandard === V1 && type === AUCTION &&
-                <V1AuctionListing network={props.network} account={props.account}
-                                  submitTransaction={props.submitTransaction}/>}
             {tokenStandard === V1 && type === TOKEN_OFFERS && <Alert type="error" message="Not implemented"/>}
             {tokenStandard === V1 && type === COLLECTION_OFFERS &&
                 <Alert type="error" message="Not implemented"/>}
-            {tokenStandard === V2 && type === FIXED_PRICE &&
-                <V2FixedListing network={props.network} account={props.account}
-                                submitTransaction={props.submitTransaction}/>}
-            {tokenStandard === V2 && type === AUCTION &&
-                <V2AuctionListing network={props.network} account={props.account}
-                                  submitTransaction={props.submitTransaction}/>}
             {tokenStandard === V2 && type === TOKEN_OFFERS &&
                 <V2TokenOffers network={props.network} account={props.account}
                                submitTransaction={props.submitTransaction}/>}
@@ -210,532 +192,6 @@ function Marketplace(props: TransactionContext) {
                 <CollectionOffers network={props.network} account={props.account}
                                   submitTransaction={props.submitTransaction}/>}
         </EasyBorder>
-    );
-}
-
-function V1FixedListing(props: TransactionContext) {
-    const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
-    const [message, setMessage] = useState<String>("");
-    const [collectionName, setCollectionName] = useState<string>(DEFAULT_COLLECTION);
-    const [tokenName, setTokenName] = useState<string>(DEFAULT_TOKEN_NAME);
-
-    const [creatorAddress, setCreatorAddress] = useState<string>("");
-    const [tokenPropertyVersion, setTokenPropertyVersion] = useState<number>(0);
-
-    const [listingPrice, setListingPrice] = useState<string>(DEFAULT_PRICE);
-    const feeScheduleAddress = defaultFeeSchedule(props.network);
-
-    const createV1Listing = async () => {
-        // Ensure you're logged in
-        if (!props.account) return [];
-        const payload =
-            await MARKETPLACE_HELPER.initFixedPriceListingForTokenv1(
-                creatorAddress,
-                collectionName,
-                tokenName,
-                BigInt(tokenPropertyVersion),
-                feeScheduleAddress,
-                BigInt(Math.floor(new Date().getTime() / 1000)),
-                BigInt(listingPrice)
-            );
-
-        console.log(`V1 LISTING payload: ${JSON.stringify(payload)}`);
-
-        let txn = await runTransaction(props, payload);
-        if (txn !== undefined) {
-            let address = "unknown";
-            for (let event of txn.events) {
-                if (event.type === "0x1::object::TransferEvent") {
-                    address = event.data.to;
-                    break
-                }
-            }
-            setMessage(`Listing created at ${address}`)
-        } else {
-            setMessage("")
-        }
-    }
-
-    return (
-        <>
-            <Row align="middle">
-                <Col flex={"auto"}>
-                    <h3>V1 Fixed Listing</h3>
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={4}>
-                    <p>Token creator address: </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onStringChange(event, setCreatorAddress)
-                        }}
-                        placeholder="Creator Address"
-                        size="large"
-                        defaultValue={props.account?.address}
-                    />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={4}>
-                    <p>Collection Name: </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onStringChange(event, setCollectionName)
-                        }}
-                        placeholder="Collection name"
-                        size="large"
-                        defaultValue={DEFAULT_COLLECTION}
-                    />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={4}>
-                    <p>Token Name: </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onStringChange(event, setTokenName)
-                        }}
-                        placeholder="Token name"
-                        size="large"
-                        defaultValue={DEFAULT_TOKEN_NAME}
-                    />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={4}>
-                    <p>Token property version: </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onNumberChange(event, setTokenPropertyVersion)
-                        }}
-                        placeholder="Token property version"
-                        size="large"
-                        defaultValue={DEFAULT_PROPERTY_VERSION}
-                    />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={4}>
-                    <p>Price(Octas): </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onStringChange(event, setListingPrice)
-                        }}
-                        placeholder="Price"
-                        size="large"
-                        defaultValue={DEFAULT_PRICE}
-                    />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={6} offset={4}>
-                    <Button
-                        onClick={() => createV1Listing()}
-                        type="primary"
-                        style={{height: "40px", backgroundColor: "#3f67ff"}}
-                    >
-                        Create V1 Fixed Listing
-                    </Button>
-                </Col>
-            </Row>
-            {
-                message &&
-                <Row align="middle">
-                    <Col span={6} offset={4}>
-                        <Alert type={"info"} message={message}/>
-                    </Col>
-                </Row>
-            }
-        </>
-    );
-}
-
-function V1AuctionListing(props: TransactionContext) {
-    const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
-    const [message, setMessage] = useState<String>("");
-    const [collectionName, setCollectionName] = useState<string>(DEFAULT_COLLECTION);
-    const [tokenName, setTokenName] = useState<string>(DEFAULT_TOKEN_NAME);
-
-    const [creatorAddress, setCreatorAddress] = useState<string>("");
-    const [tokenPropertyVersion, setTokenPropertyVersion] = useState<number>(0);
-    const [auctionDuration, setAuctionDuration] = useState<number>(3600);
-
-    const feeScheduleAddress = defaultFeeSchedule(props.network);
-    const [listingPrice, setListingPrice] = useState<string>(DEFAULT_PRICE);
-
-    const createV1AuctionListing = async () => {
-        // Ensure you're logged in
-        if (!props.account) return [];
-
-        const now = Math.floor(new Date().getTime() / 1000);
-
-        const payload = await MARKETPLACE_HELPER.initAuctionListingForTokenv1(
-            creatorAddress,
-            collectionName,
-            tokenName,
-            BigInt(tokenPropertyVersion),
-            feeScheduleAddress,
-            BigInt(now),
-            BigInt(listingPrice),
-            BigInt(100),
-            BigInt(now + auctionDuration),
-            BigInt(auctionDuration),
-            BigInt(DEFAULT_PRICE)
-        );
-
-        let txn = await runTransaction(props, payload);
-        if (txn !== undefined) {
-            let address = "unknown";
-            for (let event of txn.events) {
-                if (event.type === "0x1::object::TransferEvent") {
-                    address = event.data.to;
-                    break
-                }
-            }
-            setMessage(`Listing created at ${address}`)
-        } else {
-            setMessage("")
-        }
-    }
-
-    return (
-        <>
-            <Row align="middle">
-                <Col flex={"auto"}>
-                    <h3>V1 Auction Listing</h3>
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={4}>
-                    <p>Token creator address: </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onStringChange(event, setCreatorAddress)
-                        }}
-                        placeholder="Creator Address"
-                        size="large"
-                        defaultValue={props.account?.address}
-                    />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={4}>
-                    <p>Collection Name: </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onStringChange(event, setCollectionName)
-                        }}
-                        placeholder="Collection name"
-                        size="large"
-                        defaultValue={DEFAULT_COLLECTION}
-                    />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={4}>
-                    <p>Token Name: </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onStringChange(event, setTokenName)
-                        }}
-                        placeholder="Token name"
-                        size="large"
-                        defaultValue={DEFAULT_TOKEN_NAME}
-                    />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={4}>
-                    <p>Token property version: </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onNumberChange(event, setTokenPropertyVersion)
-                        }}
-                        placeholder="Token property version"
-                        size="large"
-                        defaultValue={DEFAULT_PROPERTY_VERSION}
-                    />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={4}>
-                    <p>Price(Octas): </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onStringChange(event, setListingPrice)
-                        }}
-                        placeholder="Price"
-                        size="large"
-                        defaultValue={DEFAULT_PRICE}
-                    />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={4}>
-                    <p>Auction Duration (seconds): </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onNumberChange(event, setAuctionDuration)
-                        }}
-                        placeholder="Auction Duration"
-                        size="large"
-                        defaultValue={"3600"}
-                    />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={6} offset={4}>
-                    <Button
-                        onClick={() => createV1AuctionListing()}
-                        type="primary"
-                        style={{height: "40px", backgroundColor: "#3f67ff"}}
-                    >
-                        Create V1 Auction Listing
-                    </Button>
-                </Col>
-            </Row>
-            {
-                message &&
-                <Row align="middle">
-                    <Col span={6} offset={4}>
-                        <Alert type={"info"} message={message}/>
-                    </Col>
-                </Row>
-            }
-        </>
-    );
-}
-
-
-function V2FixedListing(props: TransactionContext) {
-    const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
-    const [message, setMessage] = useState<String>("");
-    const [tokenAddress, setTokenAddress] = useState<string>("");
-
-    const feeScheduleAddress = defaultFeeSchedule(props.network);
-    const [listingPrice, setListingPrice] = useState<string>(DEFAULT_PRICE);
-
-    const createV2Listing = async () => {
-        // Ensure you're logged in
-        if (!props.account || !tokenAddress) return [];
-        const payload = await MARKETPLACE_HELPER.initFixedPriceListing(
-            tokenAddress,
-            feeScheduleAddress,
-            BigInt(Math.floor(new Date().getTime() / 1000)),
-            BigInt(listingPrice)
-        );
-
-        let txn = await runTransaction(props, payload);
-        if (txn !== undefined) {
-            let address = "unknown";
-            for (let event of txn.events) {
-                if (event.type === "0x1::object::TransferEvent") {
-                    address = event.data.to;
-                    break
-                }
-            }
-            setMessage(`Listing created at ${address}`)
-        } else {
-            setMessage("")
-        }
-    }
-
-    return (
-        <>
-            <Row align="middle">
-                <Col flex={"auto"}>
-                    <h3>V2 Fixed Price</h3>
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={2}>
-                    <p>Token address: </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onStringChange(event, setTokenAddress)
-                        }}
-                        placeholder="Token Address"
-                        size="large"
-                        defaultValue={""}
-                    />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={2}>
-                    <p>Price(Octas): </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onStringChange(event, setListingPrice)
-                        }}
-                        placeholder="Price"
-                        size="large"
-                        defaultValue={DEFAULT_PRICE}
-                    />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={2} offset={2}>
-                    <Button
-                        onClick={() => createV2Listing()}
-                        type="primary"
-                        style={{height: "40px", backgroundColor: "#3f67ff"}}
-                    >
-                        Create V2 Fixed Price Listing
-                    </Button>
-                </Col>
-            </Row>
-            {
-                message &&
-                <Row align="middle">
-                    <Col span={4} offset={2}>
-                        <Alert type={"info"} message={message}/>
-                    </Col>
-                </Row>
-            }
-        </>
-    );
-}
-
-function V2AuctionListing(props: TransactionContext) {
-    const MARKETPLACE_HELPER = new Helper(getProvider(props.network), MODULE_ADDRESS);
-    const [message, setMessage] = useState<String>("");
-    const [tokenAddress, setTokenAddress] = useState<string>("");
-    const [auctionDuration, setAuctionDuration] = useState<number>(3600);
-
-    const feeScheduleAddress = defaultFeeSchedule(props.network);
-    const [listingPrice, setListingPrice] = useState<string>(DEFAULT_PRICE);
-
-    const createV2AuctionListing = async () => {
-        // Ensure you're logged in
-        if (!props.account || !tokenAddress) return [];
-
-        const now = Math.floor(new Date().getTime() / 1000);
-
-        const payload = await MARKETPLACE_HELPER.initAuctionListing(
-            tokenAddress,
-            feeScheduleAddress,
-            BigInt(now),
-            BigInt(listingPrice),
-            BigInt(1000000),
-            BigInt(now + auctionDuration),
-            BigInt(auctionDuration),
-            BigInt(DEFAULT_PRICE)
-        );
-
-        let txn = await runTransaction(props, payload);
-        if (txn !== undefined) {
-            let address = "unknown";
-            for (let event of txn.events) {
-                if (event.type === "0x1::object::TransferEvent") {
-                    address = event.data.to;
-                    break
-                }
-            }
-            setMessage(`Listing created at ${address}`)
-        } else {
-            setMessage("")
-        }
-    }
-
-    return (
-        <>
-            <Row align="middle">
-                <Col flex={"auto"}>
-                    <h3>V2 Auction Listing</h3>
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={2}>
-                    <p>Token address: </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onStringChange(event, setTokenAddress)
-                        }}
-                        placeholder="Token Address"
-                        size="large"
-                        defaultValue={""}
-                    />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={2}>
-                    <p>Price(Octas): </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onStringChange(event, setListingPrice)
-                        }}
-                        placeholder="Price"
-                        size="large"
-                        defaultValue={DEFAULT_PRICE}
-                    />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={2}>
-                    <p>Auction Duration (seconds): </p>
-                </Col>
-                <Col flex={"auto"}>
-                    <Input
-                        onChange={(event) => {
-                            onNumberChange(event, setAuctionDuration)
-                        }}
-                        placeholder="Auction Duration"
-                        size="large"
-                        defaultValue={"3600"}
-                    />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={4} offset={2}>
-                    <Button
-                        onClick={() => createV2AuctionListing()}
-                        type="primary"
-                        style={{height: "40px", backgroundColor: "#3f67ff"}}
-                    >
-                        Create V2 Auction Listing
-                    </Button>
-                </Col>
-            </Row>
-            {
-                message &&
-                <Row align="middle">
-                    <Col span={4} offset={2}>
-                        <Alert type={"info"} message={message}/>
-                    </Col>
-                </Row>
-            }
-        </>
     );
 }
 
@@ -1053,6 +509,7 @@ function ListingActions(
 
 function AuctionListings(props: { ctx: TransactionContext, feeSchedule: string }) {
     const MARKETPLACE_HELPER = new Helper(getProvider(props.ctx.network), MODULE_ADDRESS);
+    const [bidAmount, setBidAmount] = useState<number>(0);
     const [listings, setListings] = useState<
         {
             buy_it_now_price: number | null,
@@ -1127,6 +584,12 @@ function AuctionListings(props: { ctx: TransactionContext, feeSchedule: string }
         const payload = await MARKETPLACE_HELPER.purchaseListing(listingAddress);
         await runTransaction(props.ctx, payload);
     }
+    const bidListing = async (listingAddress: string) => {
+        // Ensure you're logged in
+        if (!props.ctx.account) return [];
+        const payload = await MARKETPLACE_HELPER.bidAuctionListing(listingAddress, BigInt(bidAmount));
+        await runTransaction(props.ctx, payload);
+    }
 
     return (
         <>
@@ -1169,7 +632,7 @@ function AuctionListings(props: { ctx: TransactionContext, feeSchedule: string }
                                 <Row align="middle">
                                     <Col>
                                         <Tooltip placement="right" title={``}>
-                                            <b>Listing {listing_id}</b> - {token_name} - {current_bid_price ?? starting_bid_price / 100000000} APT
+                                            <b>Listing {listing_id}</b> - {token_name} - {toApt(current_bid_price ?? starting_bid_price)} APT
                                             | Sold
                                             by {seller}
                                             <Image
@@ -1178,6 +641,24 @@ function AuctionListings(props: { ctx: TransactionContext, feeSchedule: string }
                                                 alt={"img"}
                                             />
                                         </Tooltip>
+                                    </Col>
+                                    <Col>
+                                        <Input
+                                            onChange={(event) => {
+                                                onNumberChange(event, setBidAmount)
+                                            }}
+                                            style={{width: "calc(100% - 60px)"}}
+                                            placeholder="BidAmount"
+                                            size="large"
+                                            defaultValue={bidAmount}
+                                        />
+                                        <Button
+                                            onClick={() => bidListing(listing_id)}
+                                            type="primary"
+                                            style={{height: "40px", backgroundColor: "#3f67ff"}}
+                                        >
+                                            Buy now
+                                        </Button>
                                     </Col>
                                     <Col>
                                         <Button
@@ -1685,7 +1166,7 @@ function CollectionOffers(props: TransactionContext) {
     );
 }
 
-export const toApt = (num: string): number => {
+export const toApt = (num: string | number): number => {
     return Number(num) / APT
 }
 

@@ -2,7 +2,7 @@ import {Network} from "aptos";
 import React, {Fragment, useEffect, useState} from "react";
 import {
     ensureImageUri,
-    getProvider,
+    getProvider, onNumberChange,
     onStringChange,
     runTransaction,
     runViewFunction,
@@ -13,6 +13,7 @@ import {
     Button,
     Checkbox,
     Col,
+    DatePicker,
     Divider,
     Image,
     Input,
@@ -37,6 +38,9 @@ import {
 import {Marketplace as Helper} from "../MarketplaceHelper";
 import {CheckboxChangeEvent} from "antd/es/checkbox";
 import {EasyBorder} from "..";
+import type {Dayjs} from 'dayjs';
+import type {RangeValue} from 'rc-picker/lib/interface';
+import dayjs from 'dayjs';
 
 type Token = {
     standard: string,
@@ -234,9 +238,9 @@ export function Wallet(props: { network: Network, wallet_address: string }) {
                         <Col span={1}/>
                         {wallet?.tokens.map((item) => {
                                 if (!walletContextState.connected || !walletContextState.account) {
-                                    return <WalletItem ctx={null} item={item}/>
+                                    return <WalletItem address={address} ctx={null} item={item}/>
                                 } else {
-                                    return <WalletItem ctx={{
+                                    return <WalletItem address={address} ctx={{
                                         account: walletContextState.account,
                                         network: props.network,
                                         submitTransaction: walletContextState.signAndSubmitTransaction,
@@ -270,6 +274,7 @@ export function Wallet(props: { network: Network, wallet_address: string }) {
 }
 
 function WalletItem(props: {
+    address: string,
     item: Token,
     ctx: TransactionContext | null,
 }) {
@@ -303,6 +308,7 @@ function WalletItem(props: {
     const finishedCallback = () => {
         setSubmitFixed(false);
         setConfirmLoading(false);
+        setOpenListModal(false)
         setOpenTransferModal(false);
     };
 
@@ -346,7 +352,7 @@ function WalletItem(props: {
                     />
                 </Tooltip>}
         </Row>
-        {props.ctx && <Row align={"middle"}>
+        {props.ctx?.account?.address === props.address && <Row align={"middle"}>
             <Col flex={"auto"}>
                 <Button
                     onClick={showListModal}
@@ -361,6 +367,7 @@ function WalletItem(props: {
                     onOk={handleListOk}
                     confirmLoading={confirmLoading}
                     onCancel={handleCancel}
+                    width={750}
                 >
                     <Select
                         defaultValue={listingType}
@@ -368,7 +375,7 @@ function WalletItem(props: {
                         onChange={setListingType}
                         options={[
                             {value: FIXED_PRICE, label: FIXED_PRICE},
-                            {value: AUCTION, label: AUCTION, disabled: props.item.standard === V2},
+                            {value: AUCTION, label: AUCTION},
                         ]}
                     />
                     {props.item.standard === V1 && listingType === FIXED_PRICE &&
@@ -381,7 +388,8 @@ function WalletItem(props: {
                         <V2FixedListing item={props.item} ctx={props.ctx} submit={submitFixed}
                                         submitCallback={finishedCallback}/>}
                     {props.item.standard === V2 && listingType === AUCTION &&
-                        <Alert type={"error"} message={"V2 Auction not supported yet"}/>}
+                        <V2AuctionListing item={props.item} ctx={props.ctx} submit={submitFixed}
+                                          submitCallback={finishedCallback}/>}
                 </Modal>
             </Col>
             <Col flex={"auto"}>
@@ -491,9 +499,13 @@ function V1AuctionListing(props: {
 }) {
     const MARKETPLACE_HELPER = new Helper(getProvider(props.ctx.network), MODULE_ADDRESS);
 
-    const [listingPrice, setListingPrice] = useState<string>(DEFAULT_PRICE);
+    const [startingBid, setStartingBid] = useState<string>("");
+    const [bidIncrement, setBidIncrement] = useState<string>("");
     const [buyNowPrice, setBuyNowPrice] = useState<string>("");
     const [buyNowEnabled, setBuyNowEnabled] = useState<boolean>(false);
+    const [startTime, setStartTime] = useState<number>(-1);
+    const [endTime, setEndTime] = useState<number>(-1);
+    const [minBidTime, setMinBidTime] = useState<number>(3600);
     const feeScheduleAddress = defaultFeeSchedule(props.ctx.network);
 
     useEffect(() => {
@@ -506,6 +518,17 @@ function V1AuctionListing(props: {
     const createV1Listing = async () => {
         // Ensure you're logged in
         if (!props.ctx.account) return [];
+
+        // Ensure that fields are set to a value
+        if (startingBid === undefined || bidIncrement === undefined || buyNowPrice === undefined) return;
+
+        let buyNow: bigint | undefined;
+        if (buyNowEnabled) {
+            buyNow = BigInt(buyNowPrice);
+        } else {
+            buyNow = undefined;
+        }
+
         const payload =
             await MARKETPLACE_HELPER.initAuctionListingForTokenv1(
                 props.item.creator_address,
@@ -513,11 +536,12 @@ function V1AuctionListing(props: {
                 props.item.name,
                 BigInt(props.item.property_version ?? 0),
                 feeScheduleAddress,
-                BigInt(Math.floor(new Date().getTime() / 1000)),
-                BigInt(0),// bid increment
-                BigInt(0),//auction_end-time
-                BigInt(3600), // min bid time
-                BigInt(listingPrice) // Buy it now price
+                BigInt(startTime),    // start time
+                BigInt(startingBid),  // starting bid
+                BigInt(bidIncrement), // bid increment
+                BigInt(endTime),      // auction_end-time
+                BigInt(minBidTime),   // min bid time
+                buyNow                // Buy it now price
             );
 
         try {
@@ -542,8 +566,42 @@ function V1AuctionListing(props: {
         setBuyNowEnabled(e.target.checked)
     };
 
+    const rangePresets: {
+        label: string;
+        value: [Dayjs, Dayjs];
+    }[] = [
+        {label: '1 Day', value: [dayjs().add(1, 'd'), dayjs()]},
+        {label: '3 Days', value: [dayjs().add(3, 'd'), dayjs()]},
+        {label: '5 Days', value: [dayjs().add(5, 'd'), dayjs()]},
+        {label: '1 Week', value: [dayjs().add(7, 'd'), dayjs()]},
+    ];
+
+    const onTimeChange = (time: RangeValue<Dayjs>, _dateString: [string, string]) => {
+        if (!time || !time[0] || !time[1]) return;
+
+        setStartTime(time[0].unix());
+        setEndTime(time[1].unix());
+    }
+
     return (
         <>
+            <Row align="middle">
+                <Col span={6}>
+                    <p>Starting Bid(Octas): </p>
+                </Col>
+                <Col span={6}>
+                    <Input
+                        onChange={(event) => {
+                            onStringChange(event, setStartingBid)
+                        }}
+                        placeholder="Starting Bid"
+                        size="large"
+                    />
+                </Col>
+                <Col offset={2} flex={"auto"}>
+                    {startingBid !== "" && <p>{toApt(startingBid)} APT</p>}
+                </Col>
+            </Row>
             <Row align="middle">
                 <Col span={6}>
                     <p>Bid increment(Octas): </p>
@@ -551,37 +609,40 @@ function V1AuctionListing(props: {
                 <Col span={6}>
                     <Input
                         onChange={(event) => {
-                            onStringChange(event, setListingPrice)
+                            onStringChange(event, setBidIncrement);
                         }}
                         placeholder="Bid Increment"
                         size="large"
                     />
                 </Col>
+                <Col offset={2} flex={"auto"}>
+                    {bidIncrement !== "" && <p>{toApt(bidIncrement)} APT</p>}
+                </Col>
             </Row>
             <Row align="middle">
                 <Col span={6}>
-                    <p>Auction start time(TODO): </p>
+                    <p>Auction start time: </p>
                 </Col>
-                <Col span={6}>
-                    <Input
-                        onChange={(event) => {
-                            onStringChange(event, setListingPrice)
-                        }}
-                        placeholder="Auction Start Time"
-                        size="large"
+                <Col span={12}>
+                    <DatePicker.RangePicker
+                        presets={rangePresets}
+                        showTime={{format: 'HH:mm'}}
+                        showNow
+                        format="YYYY-MM-DD HH:mm"
+                        onChange={onTimeChange}
                     />
                 </Col>
             </Row>
             <Row align="middle">
                 <Col span={6}>
-                    <p>Auction duration(TODO): </p>
+                    <p>Min bid time (seconds): </p>
                 </Col>
                 <Col span={6}>
                     <Input
                         onChange={(event) => {
-                            onStringChange(event, setListingPrice)
+                            onNumberChange(event, setMinBidTime);
                         }}
-                        placeholder="Auction Duration"
+                        placeholder="Min bid time"
                         size="large"
                     />
                 </Col>
@@ -596,7 +657,187 @@ function V1AuctionListing(props: {
                 <Col span={6}>
                     <Input
                         onChange={(event) => {
-                            onStringChange(event, setBuyNowPrice)
+                            onStringChange(event, setBuyNowPrice);
+                        }}
+                        placeholder="Buy Now Price"
+                        size="large"
+                        defaultValue={buyNowPrice}
+                        disabled={!buyNowEnabled}
+                    />
+                </Col>
+                <Col offset={2} flex={"auto"}>
+                    {buyNowEnabled && buyNowPrice !== "" && <p>{toApt(buyNowPrice)} APT</p>}
+                </Col>
+            </Row>
+        </>
+    )
+        ;
+}
+
+function V2AuctionListing(props: {
+    ctx: TransactionContext,
+    item: Token,
+    submit: boolean,
+    submitCallback: () => void
+}) {
+    const MARKETPLACE_HELPER = new Helper(getProvider(props.ctx.network), MODULE_ADDRESS);
+
+    const [startingBid, setStartingBid] = useState<string>("");
+    const [bidIncrement, setBidIncrement] = useState<string>("");
+    const [buyNowPrice, setBuyNowPrice] = useState<string>("");
+    const [buyNowEnabled, setBuyNowEnabled] = useState<boolean>(false);
+    const [startTime, setStartTime] = useState<number>(-1);
+    const [endTime, setEndTime] = useState<number>(-1);
+    const [minBidTime, setMinBidTime] = useState<number>(3600);
+    const feeScheduleAddress = defaultFeeSchedule(props.ctx.network);
+
+    useEffect(() => {
+        if (props.submit) {
+            createV1Listing();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [props.submit])
+
+    const createV1Listing = async () => {
+        // Ensure you're logged in
+        if (!props.ctx.account) return [];
+
+        // Ensure that fields are set to a value
+        if (startingBid === undefined || bidIncrement === undefined || buyNowPrice === undefined) return;
+
+        let buyNow: bigint | undefined;
+        if (buyNowEnabled) {
+            buyNow = BigInt(buyNowPrice);
+        } else {
+            buyNow = undefined;
+        }
+
+        const payload =
+            await MARKETPLACE_HELPER.initAuctionListing(
+                props.item.data_id,
+                feeScheduleAddress,
+                BigInt(startTime),    // start time
+                BigInt(startingBid),  // starting bid
+                BigInt(bidIncrement), // bid increment
+                BigInt(endTime),      // auction_end-time
+                BigInt(minBidTime),   // min bid time
+                buyNow                // Buy it now price
+            );
+
+        try {
+            let txn = await runTransaction(props.ctx, payload);
+            if (txn) {
+                let address = "unknown";
+                for (let event of txn.events) {
+                    if (event.type === "0x1::object::TransferEvent") {
+                        address = event.data.to;
+                        break
+                    }
+                }
+                console.log(`Listing created at ${address}`);
+            }
+        } catch (error: any) {
+            console.log(`Failed to create listing ${error}`);
+        }
+        props.submitCallback();
+    }
+
+    const onCheckBuyNow = (e: CheckboxChangeEvent) => {
+        setBuyNowEnabled(e.target.checked)
+    };
+
+    const rangePresets: {
+        label: string;
+        value: [Dayjs, Dayjs];
+    }[] = [
+        {label: '1 Day', value: [dayjs().add(1, 'd'), dayjs()]},
+        {label: '3 Days', value: [dayjs().add(3, 'd'), dayjs()]},
+        {label: '5 Days', value: [dayjs().add(5, 'd'), dayjs()]},
+        {label: '1 Week', value: [dayjs().add(7, 'd'), dayjs()]},
+    ];
+
+    const onTimeChange = (time: RangeValue<Dayjs>, _dateString: [string, string]) => {
+        if (!time || !time[0] || !time[1]) return;
+
+        setStartTime(time[0].unix());
+        setEndTime(time[1].unix());
+    }
+
+    return (
+        <>
+            <Row align="middle">
+                <Col span={6}>
+                    <p>Starting Bid(Octas): </p>
+                </Col>
+                <Col span={6}>
+                    <Input
+                        onChange={(event) => {
+                            onStringChange(event, setStartingBid)
+                        }}
+                        placeholder="Starting Bid"
+                        size="large"
+                    />
+                </Col>
+                <Col offset={2} flex={"auto"}>
+                    {startingBid !== "" && <p>{toApt(startingBid)} APT</p>}
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={6}>
+                    <p>Bid increment(Octas): </p>
+                </Col>
+                <Col span={6}>
+                    <Input
+                        onChange={(event) => {
+                            onStringChange(event, setBidIncrement);
+                        }}
+                        placeholder="Bid Increment"
+                        size="large"
+                    />
+                </Col>
+                <Col offset={2} flex={"auto"}>
+                    {bidIncrement !== "" && <p>{toApt(bidIncrement)} APT</p>}
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={6}>
+                    <p>Auction start time: </p>
+                </Col>
+                <Col span={12}>
+                    <DatePicker.RangePicker
+                        presets={rangePresets}
+                        showTime={{format: 'HH:mm'}}
+                        showNow
+                        format="YYYY-MM-DD HH:mm"
+                        onChange={onTimeChange}
+                    />
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={6}>
+                    <p>Min bid time (seconds): </p>
+                </Col>
+                <Col span={6}>
+                    <Input
+                        onChange={(event) => {
+                            onNumberChange(event, setMinBidTime);
+                        }}
+                        placeholder="Min bid time"
+                        size="large"
+                    />
+                </Col>
+            </Row>
+            <Row align="middle">
+                <Col span={5}>
+                    <p>Buy now price: </p>
+                </Col>
+                <Col span={1}>
+                    <Checkbox onChange={onCheckBuyNow}/>
+                </Col>
+                <Col span={6}>
+                    <Input
+                        onChange={(event) => {
+                            onStringChange(event, setBuyNowPrice);
                         }}
                         placeholder="Buy Now Price"
                         size="large"

@@ -254,7 +254,7 @@ export function NavBar(props: { expectedNetwork: string, current: string }) {
             <Col span={6}>
                 <h1>NFT Playground ({props.expectedNetwork})</h1>
             </Col>
-            <Col span={8}>
+            <Col span={10}>
                 <Menu onClick={onClick} selectedKeys={[props.current]} mode="horizontal" items={items}/>
             </Col>
             <Col flex={"auto"}/>
