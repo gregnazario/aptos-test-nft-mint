@@ -41,8 +41,9 @@ import {EasyBorder} from "..";
 import type {Dayjs} from 'dayjs';
 import type {RangeValue} from 'rc-picker/lib/interface';
 import dayjs from 'dayjs';
+import {useNavigate} from "react-router";
 
-type Token = {
+export type Token = {
     standard: string,
     collection: string,
     collection_id: string,
@@ -318,6 +319,7 @@ function WalletItem(props: {
         setOpenListModal(false);
         setOpenTransferModal(false);
     };
+    const navigate = useNavigate();
 
     return <Col span={2.5}>
         <Row align={"middle"}>
@@ -330,6 +332,7 @@ function WalletItem(props: {
                                         Property Version: ${props.item.property_version}
                                         `}>
                     <Image
+                        onClick={() => navigate(`/token/${props.item.data_id}`)}
                         width={150}
                         src={props.item.uri}
                         alt={props.item.name}
@@ -345,6 +348,7 @@ function WalletItem(props: {
                      Creator: ${props.item.creator_address}\n
                      Property Version: ${props.item.property_version}`}>
                     <Image
+                        onClick={() => navigate(`/token/${props.item.data_id}`)}
                         width={150}
                         src={props.item.uri}
                         alt={props.item.name}
@@ -420,7 +424,7 @@ function WalletItem(props: {
     </Col>;
 }
 
-function V1FixedListing(props: {
+export function V1FixedListing(props: {
     ctx: TransactionContext, item: Token, submit: boolean, submitCallback: () => void
 }) {
     const MARKETPLACE_HELPER = new Helper(getProvider(props.ctx.network), MODULE_ADDRESS);
@@ -491,7 +495,7 @@ function V1FixedListing(props: {
     );
 }
 
-function V1AuctionListing(props: {
+export function V1AuctionListing(props: {
     ctx: TransactionContext,
     item: Token,
     submit: boolean,
@@ -674,7 +678,7 @@ function V1AuctionListing(props: {
         ;
 }
 
-function V2AuctionListing(props: {
+export function V2AuctionListing(props: {
     ctx: TransactionContext,
     item: Token,
     submit: boolean,
@@ -854,7 +858,7 @@ function V2AuctionListing(props: {
         ;
 }
 
-function V2FixedListing(props: {
+export function V2FixedListing(props: {
     ctx: TransactionContext, item
         :
         Token, submit

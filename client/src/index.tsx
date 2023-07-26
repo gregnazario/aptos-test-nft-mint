@@ -25,6 +25,7 @@ import {BrowserRouter} from "react-router-dom";
 import {Wallet} from "./pages/Wallet";
 import {WalletSelector} from "@aptos-labs/wallet-adapter-ant-design";
 import Launchpad from "./pages/Launchpad";
+import {TokenDetails} from "./pages/Token";
 
 
 const DEVNET_WALLETS = [
@@ -107,6 +108,7 @@ function Selector(this: any) {
             <Routes>
                 <Route index path="/" element={<AppPage network={network}/>}/>
                 <Route path="/wallet/:wallet_address" element={<WalletPage network={network}/>}/>
+                <Route path="/token/:token_id" element={<TokenPage network={network}/>}/>
                 <Route path="/launchpad" element={<LaunchpadPage network={network}/>}/>
                 <Route path="*" element={<InvalidPage network={network}/>}/>
             </Routes>
@@ -175,6 +177,33 @@ export function WalletPage(props: { network: Network }) {
             <AptosWalletAdapterProvider plugins={MAINNET_WALLETS} autoConnect={true}>
                 <NavBar expectedNetwork={props.network} current={WALLET}/>
                 <Wallet network={props.network} wallet_address={wallet_address ?? ""}/>
+            </AptosWalletAdapterProvider>
+        }
+    </Fragment>
+}
+
+
+export function TokenPage(props: { network: Network }) {
+    let {token_id} = useParams();
+    return <Fragment key={"token_page"}>
+        {props.network === Network.DEVNET &&
+            <AptosWalletAdapterProvider plugins={DEVNET_WALLETS} autoConnect={true}>
+                <NavBar expectedNetwork={props.network} current={WALLET}/>
+                <TokenDetails network={props.network} token_id={token_id ?? ""}/>
+            </AptosWalletAdapterProvider>
+        }
+        {
+            props.network === Network.TESTNET &&
+            <AptosWalletAdapterProvider plugins={TESTNET_WALLETS} autoConnect={true}>
+                <NavBar expectedNetwork={props.network} current={WALLET}/>
+                <TokenDetails network={props.network} token_id={token_id ?? ""}/>
+            </AptosWalletAdapterProvider>
+        }
+        {
+            props.network === Network.MAINNET &&
+            <AptosWalletAdapterProvider plugins={MAINNET_WALLETS} autoConnect={true}>
+                <NavBar expectedNetwork={props.network} current={WALLET}/>
+                <TokenDetails network={props.network} token_id={token_id ?? ""}/>
             </AptosWalletAdapterProvider>
         }
     </Fragment>
