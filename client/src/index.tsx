@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React, {Fragment, useEffect} from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
@@ -119,7 +119,9 @@ function InvalidPage(props: {
 }) {
     return <>
         <NavBar expectedNetwork={props.network} current={'invalid'}/>
-        <Alert type="error" message="Invalid page"/>
+        <EasyBorder offset={2}>
+            <Alert type="error" message="Invalid page"/>
+        </EasyBorder>
     </>
 }
 
@@ -127,7 +129,7 @@ function InvalidPage(props: {
 function AppPage(props: {
     network: Network
 }) {
-    return <>
+    return <Fragment key={"app_page"}>
         {props.network === Network.DEVNET &&
             <AptosWalletAdapterProvider plugins={DEVNET_WALLETS} autoConnect={true}>
                 <NavBar expectedNetwork={props.network} current={MARKETPLACE}/>
@@ -148,13 +150,13 @@ function AppPage(props: {
                 <App expectedNetwork={props.network}/>
             </AptosWalletAdapterProvider>
         }
-    </>
+    </Fragment>
 }
 
 export function WalletPage(props: { network: Network }) {
     // FIXME: Allow input of wallet on page, with setting url
     let {wallet_address} = useParams();
-    return <>
+    return <Fragment key={"wallet_page"}>
         {props.network === Network.DEVNET &&
             <AptosWalletAdapterProvider plugins={DEVNET_WALLETS} autoConnect={true}>
                 <NavBar expectedNetwork={props.network} current={WALLET}/>
@@ -175,12 +177,12 @@ export function WalletPage(props: { network: Network }) {
                 <Wallet network={props.network} wallet_address={wallet_address ?? ""}/>
             </AptosWalletAdapterProvider>
         }
-    </>
+    </Fragment>
 }
 
 
 export function LaunchpadPage(props: { network: Network }) {
-    return <>
+    return <Fragment key={"launchpad_page"}>
         {props.network === Network.DEVNET &&
             <AptosWalletAdapterProvider plugins={DEVNET_WALLETS} autoConnect={true}>
                 <NavBar expectedNetwork={props.network} current={LAUNCHPAD}/>
@@ -201,7 +203,7 @@ export function LaunchpadPage(props: { network: Network }) {
                 <Launchpad expectedNetwork={props.network}/>
             </AptosWalletAdapterProvider>
         }
-    </>
+    </Fragment>
 }
 
 
@@ -247,19 +249,58 @@ export function NavBar(props: { expectedNetwork: string, current: string }) {
         }
     };
 
+    return <EasyBorder offset={2}>
+        <Row align={"middle"}>
+            <Col span={6}>
+                <h1>NFT Playground ({props.expectedNetwork})</h1>
+            </Col>
+            <Col span={8}>
+                <Menu onClick={onClick} selectedKeys={[props.current]} mode="horizontal" items={items}/>
+            </Col>
+            <Col flex={"auto"}/>
+            <Col offset={2} span={2}>
+                <WalletSelector/>
+            </Col>
+        </Row>
+    </EasyBorder>;
+}
+
+export function EasyBorder(props: { offset: number, children?: React.ReactNode }) {
     return <Row align={"middle"}>
-        <Col offset={2} span={6}>
-            <h1>NFT Playground ({props.expectedNetwork})</h1>
+        <Col offset={props.offset} flex={"auto"}>
+            {props.children}
         </Col>
-        <Col span={8}>
-            <Menu onClick={onClick} selectedKeys={[props.current]} mode="horizontal" items={items}/>
-        </Col>
-        <Col flex={"auto"}/>
-        <Col offset={2} span={2}>
-            <WalletSelector/>
-        </Col>
-        <Col span={2}/>
-    </Row>;
+        <Col span={props.offset}/>
+    </Row>
+}
+
+export function NetworkChecker(props: { expectedNetwork: Network, children?: React.ReactNode }) {
+    let walletContextState = useWallet();
+    const isSelectedNetwork = (): boolean => {
+        return walletContextState.network?.name?.toLowerCase() === props.expectedNetwork.toLowerCase();
+    }
+
+    return <Fragment key={"network_checker"}>{!
+            walletContextState.connected &&
+        <EasyBorder offset={1}>
+            <Alert message={`Please connect your wallet`} type="info"/>
+        </EasyBorder>
+    }
+        {
+            walletContextState.connected && !isSelectedNetwork() &&
+            <EasyBorder offset={1}>
+                <Alert
+                    message={`Wallet is connected to ${walletContextState.network?.name}.  Please connect to ${props.expectedNetwork}`}
+                    type="warning"/>
+            </EasyBorder>
+        }
+        {
+            walletContextState.connected && isSelectedNetwork() &&
+            <EasyBorder offset={1}>
+                {props.children}
+            </EasyBorder>
+        }
+    </Fragment>;
 }
 
 const LAUNCHPAD = "launchpad";

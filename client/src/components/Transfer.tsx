@@ -1,7 +1,7 @@
 import {Button, Col, Input, Row} from "antd";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
-import {useState} from "react";
-import {onStringChange, runTransaction, TransactionContext} from "./Helper";
+import {Fragment, useState} from "react";
+import {onStringChange, runTransaction, TransactionContext} from "../Helper";
 
 export function Transfer(props: { ctx: TransactionContext, objectAddress: string }) {
     const [destinationAddress, setDestinationAddress] = useState<string>("");
@@ -18,8 +18,7 @@ export function Transfer(props: { ctx: TransactionContext, objectAddress: string
         await runTransaction(props.ctx, payload);
     }
 
-    return (
-        <>
+    return (<Fragment key={"transfer_object"}>
             <Row align="middle">
                 <Col span={6}>
                     <p>Destination address: </p>
@@ -47,6 +46,6 @@ export function Transfer(props: { ctx: TransactionContext, objectAddress: string
                     </Button>
                 </Col>
             </Row>
-        </>
+        </Fragment>
     );
 }

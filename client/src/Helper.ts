@@ -79,3 +79,30 @@ export const onBigIntChange = async (event: React.ChangeEvent<HTMLInputElement>,
     const val = event.target.value;
     setter(BigInt(val));
 }
+
+export const ensureImageUri = async (uri: string) => {
+    // Empty means something's wrong anyways
+    if (!uri) {
+        return uri
+    }
+    try {
+        if (!uri.endsWith(".jpg") && !uri.endsWith(".jpeg") && !uri.endsWith(".png") && !uri.endsWith(".svg")) {
+            uri = ensureHttps(uri);
+            let response = await fetch(uri);
+            const data = await response.json()
+            if (data.image) {
+                uri = ensureHttps(data.image);
+            }
+        }
+    } catch (error: any) {
+        // Let the URI stay as the old one for now
+    }
+    return uri
+}
+
+export const ensureHttps = (uri: string): string => {
+    if (uri.startsWith("ipfs://")) {
+        uri = uri.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/")
+    }
+    return uri
+}

@@ -1,6 +1,13 @@
 import {Network} from "aptos";
-import React, {useEffect, useState} from "react";
-import {getProvider, onStringChange, runTransaction, runViewFunction, TransactionContext} from "../Helper";
+import React, {Fragment, useEffect, useState} from "react";
+import {
+    ensureImageUri,
+    getProvider,
+    onStringChange,
+    runTransaction,
+    runViewFunction,
+    TransactionContext
+} from "../Helper";
 import {
     Alert,
     Button,
@@ -16,8 +23,7 @@ import {
     Select,
     Tooltip,
 } from "antd";
-import {ensureImageUri} from "../App";
-import {Transfer} from "../Transfer";
+import {Transfer} from "../components/Transfer";
 import {useWallet} from "@aptos-labs/wallet-adapter-react";
 import {
     AUCTION,
@@ -30,6 +36,7 @@ import {
 } from "../Marketplace";
 import {Marketplace as Helper} from "../MarketplaceHelper";
 import {CheckboxChangeEvent} from "antd/es/checkbox";
+import {EasyBorder} from "..";
 
 type Token = {
     standard: string,
@@ -213,56 +220,53 @@ export function Wallet(props: { network: Network, wallet_address: string }) {
     }
 
     // TODO: Prettyfy and add current listings
-    return <Row align="middle">
-        <Col offset={2} flex={"auto"}>
-            <Layout>
-                <Row align="middle">
-                    <Col offset={2}>
-                        <h2>Wallet: {name}</h2>
-                    </Col>
-                </Row>
-                <Divider/>
-                {!wallet?.error &&
-                    <>
-                        <Row align={"middle"}>
-                            <Col span={1}/>
-                            {wallet?.tokens.map((item) => {
-                                    if (!walletContextState.connected || !walletContextState.account) {
-                                        return <WalletItem ctx={null} item={item}/>
-                                    } else {
-                                        return <WalletItem ctx={{
-                                            account: walletContextState.account,
-                                            network: props.network,
-                                            submitTransaction: walletContextState.signAndSubmitTransaction,
-                                        }} item={item}/>
-                                    }
-
+    return <EasyBorder offset={1}>
+        <Layout>
+            <Row align="middle">
+                <Col offset={1}>
+                    <h2>Wallet: {name}</h2>
+                </Col>
+            </Row>
+            <Divider/>
+            {!wallet?.error &&
+                <Fragment key={"wallet_nfts"}>
+                    <Row align={"middle"}>
+                        <Col span={1}/>
+                        {wallet?.tokens.map((item) => {
+                                if (!walletContextState.connected || !walletContextState.account) {
+                                    return <WalletItem ctx={null} item={item}/>
+                                } else {
+                                    return <WalletItem ctx={{
+                                        account: walletContextState.account,
+                                        network: props.network,
+                                        submitTransaction: walletContextState.signAndSubmitTransaction,
+                                    }} item={item}/>
                                 }
-                            )}
-                            <Col span={1}/>
-                        </Row>
-                        <Row align="middle">
-                            <Col offset={2} flex={"auto"}>
-                                <Pagination onChange={(page, limit) => {
-                                    fetchWallet(address, name, page - 1, limit)
-                                }} defaultCurrent={1} total={totalNfts}/>
-                            </Col>
-                            <Col span={2}/>
-                        </Row>
-                    </>
-                }
-                {
-                    wallet?.error &&
+
+                            }
+                        )}
+                        <Col span={1}/>
+                    </Row>
                     <Row align="middle">
                         <Col offset={2} flex={"auto"}>
-                            <Alert type="error" message={wallet.error}/>
+                            <Pagination onChange={(page, limit) => {
+                                fetchWallet(address, name, page - 1, limit)
+                            }} defaultCurrent={1} total={totalNfts}/>
                         </Col>
+                        <Col span={2}/>
                     </Row>
-                }
-            </Layout>
-        </Col>
-        <Col span={2}/>
-    </Row>;
+                </Fragment>
+            }
+            {
+                wallet?.error &&
+                <Row align="middle">
+                    <Col offset={2} flex={"auto"}>
+                        <Alert type="error" message={wallet.error}/>
+                    </Col>
+                </Row>
+            }
+        </Layout>
+    </EasyBorder>;
 }
 
 function WalletItem(props: {
@@ -403,18 +407,11 @@ function WalletItem(props: {
                 </Modal>
             </Col>
         </Row>}
-    </Col>
-        ;
+    </Col>;
 }
 
 function V1FixedListing(props: {
-    ctx: TransactionContext, item
-        :
-        Token, submit
-        :
-        boolean, submitCallback
-        :
-        () => void
+    ctx: TransactionContext, item: Token, submit: boolean, submitCallback: () => void
 }) {
     const MARKETPLACE_HELPER = new Helper(getProvider(props.ctx.network), MODULE_ADDRESS);
 
@@ -461,7 +458,7 @@ function V1FixedListing(props: {
     }
 
     return (
-        <>
+        <Fragment key={"listing"}>
             <Row align="middle">
                 <Col span={6}>
                     <p>Price(Octas): </p>
@@ -480,22 +477,15 @@ function V1FixedListing(props: {
                     <p>{toApt(listingPrice)} APT</p>
                 </Col>
             </Row>
-        </>
-    )
-        ;
+        </Fragment>
+    );
 }
 
 function V1AuctionListing(props: {
     ctx: TransactionContext,
-    item
-        :
-        Token,
-    submit
-        :
-        boolean,
-    submitCallback
-        :
-        () => void
+    item: Token,
+    submit: boolean,
+    submitCallback: () => void
 }) {
     const MARKETPLACE_HELPER = new Helper(getProvider(props.ctx.network), MODULE_ADDRESS);
 
