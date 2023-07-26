@@ -32,19 +32,20 @@
     "web-vitals": "^2.1.4"
   },
   "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "@types/jest": "^29.5.3",
     "@types/node": "^20.4.5",
     "@types/react": "^18.2.16",
     "@types/react-dom": "^18.2.7",
     "@types/react-router-dom": "^5.3.3",
-    "gh-pages": "^5.0.0",
-    "react-scripts": "^5.0.1",
-    "prettier": "3.0.0",
     "eslint": "8.45.0",
     "eslint-config-airbnb-base": "15.0.0",
     "eslint-config-airbnb-typescript": "17.1.0",
     "eslint-config-prettier": "8.8.0",
-    "eslint-plugin-import": "2.27.5"
+    "eslint-plugin-import": "2.27.5",
+    "gh-pages": "^5.0.0",
+    "prettier": "3.0.0",
+    "react-scripts": "^5.0.1"
   },
   "scripts": {
     "start": "react-scripts start",
