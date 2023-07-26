@@ -1,10 +1,23 @@
-import {Button, Col, Input, Row} from "antd";
+import {Col, Input, Row} from "antd";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
-import {Fragment, useState} from "react";
-import {onStringChange, runTransaction, TransactionContext} from "../Helper";
+import {Fragment, useEffect, useState} from "react";
+import {runTransaction, TransactionContext} from "../Helper";
+import {resolveToAddress} from "../pages/Wallet";
 
-export function Transfer(props: { ctx: TransactionContext, objectAddress: string }) {
+export function Transfer(props: {
+    ctx: TransactionContext,
+    objectAddress: string,
+    submit: boolean,
+    submitCallback: () => void
+}) {
     const [destinationAddress, setDestinationAddress] = useState<string>("");
+
+    useEffect(() => {
+        if (props.submit) {
+            transferObject();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [props.submit])
 
     const transferObject = async () => {
         // Ensure you're logged in
@@ -16,6 +29,7 @@ export function Transfer(props: { ctx: TransactionContext, objectAddress: string
             arguments: [props.objectAddress, destinationAddress],
         };
         await runTransaction(props.ctx, payload);
+        props.submitCallback();
     }
 
     return (<Fragment key={"transfer_object"}>
@@ -25,25 +39,15 @@ export function Transfer(props: { ctx: TransactionContext, objectAddress: string
                 </Col>
                 <Col flex={"auto"}>
                     <Input
-                        onChange={(event) => {
-                            onStringChange(event, setDestinationAddress)
+                        onChange={async (event) => {
+                            let address = await resolveToAddress(event.target.value);
+                            setDestinationAddress(address);
                         }}
                         style={{width: "calc(100% - 60px)"}}
                         placeholder="Destination Address"
                         size="large"
                         defaultValue={""}
                     />
-                </Col>
-            </Row>
-            <Row align="middle">
-                <Col span={4} offset={4}>
-                    <Button
-                        onClick={() => transferObject()}
-                        type="primary"
-                        style={{height: "40px", backgroundColor: "#3f67ff"}}
-                    >
-                        Transfer Object
-                    </Button>
                 </Col>
             </Row>
         </Fragment>

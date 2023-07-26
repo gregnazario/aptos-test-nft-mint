@@ -403,7 +403,9 @@ function WalletItem(props: {
                     {props.item.standard === V1 &&
                         <Alert type={"warning"}
                                message={"Transfer currently not supported for V1, please use your wallet to transfer"}/>}
-                    {props.item.standard === V2 && <Transfer ctx={props.ctx} objectAddress={props.item.data_id}/>}
+                    {props.item.standard === V2 &&
+                        <Transfer ctx={props.ctx} objectAddress={props.item.data_id} submit={submitFixed}
+                                  submitCallback={finishedCallback}/>}
                 </Modal>
             </Col>
         </Row>}
