@@ -34,7 +34,7 @@ const icDappId = '89016ba8-b4e1-4ddf-9c59-3b406b5b5e2a';
 window.Buffer = BufferPolyFill;
 
 const DEVNET_WALLETS = [
-    new IdentityConnectWallet(icDappId, NetworkName.Devnet),
+    new IdentityConnectWallet(icDappId, {networkName: NetworkName.Devnet}),
     new PetraWallet(),
     new FewchaWallet(),
     new MartianWallet(),
@@ -47,7 +47,7 @@ const DEVNET_WALLETS = [
     new TrustWallet(),
     new WelldoneWallet()];
 const TESTNET_WALLETS = [
-    new IdentityConnectWallet(icDappId, NetworkName.Testnet),
+    new IdentityConnectWallet(icDappId, {networkName: NetworkName.Testnet}),
     new PetraWallet(),
     new BloctoWallet({
         network: NetworkName.Testnet,
@@ -64,7 +64,7 @@ const TESTNET_WALLETS = [
     new TrustWallet(),
     new WelldoneWallet()];
 const MAINNET_WALLETS = [
-    new IdentityConnectWallet(icDappId, NetworkName.Mainnet),
+    new IdentityConnectWallet(icDappId, {networkName: NetworkName.Mainnet}),
     new PetraWallet(),
     new BloctoWallet({
         network: NetworkName.Mainnet,

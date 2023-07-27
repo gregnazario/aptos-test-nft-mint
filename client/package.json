@@ -9,7 +9,7 @@
     "@blocto/aptos-wallet-adapter-plugin": "^0.2.1",
     "@martianwallet/aptos-wallet-adapter": "^0.0.4",
     "@nightlylabs/aptos-wallet-adapter-plugin": "^0.2.12",
-    "@identity-connect/wallet-adapter-plugin": "^0.0.7",
+    "@identity-connect/wallet-adapter-plugin": "^0.0.10",
     "@openblockhq/aptos-wallet-adapter": "^0.1.5",
     "@pontem/wallet-adapter-plugin": "^0.2.0",
     "@rise-wallet/wallet-adapter": "^0.1.2",
