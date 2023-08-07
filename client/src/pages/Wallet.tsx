@@ -133,8 +133,8 @@ export function Wallet(props: { network: Network, wallet_address: string }) {
             return
         }
         try {
-            let numNfts = await getProvider(props.network).indexerClient.getAccountTokensCount(address)
-            setTotalNfts(numNfts.current_token_ownerships_aggregate.aggregate?.count ?? 0);
+            let numNfts = await getProvider(props.network).getAccountTokensCount(address)
+            setTotalNfts(numNfts.current_token_ownerships_v2_aggregate.aggregate?.count ?? 0);
         } catch (error: any) {
             console.log("Failed to load wallet" + error)
             setTotalNfts(10);
@@ -146,7 +146,7 @@ export function Wallet(props: { network: Network, wallet_address: string }) {
             return;
         }
         try {
-            let tokens_query = await getProvider(props.network).indexerClient.getOwnedTokens(address, {
+            let tokens_query = await getProvider(props.network).getOwnedTokens(address, {
                 options: {
                     offset: page * limit,
                     limit: limit

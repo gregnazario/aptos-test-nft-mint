@@ -43,7 +43,7 @@ export function TokenDetails(props: { network: Network, token_id: string }) {
 
     const fetchToken = async () => {
         const provider = getProvider(props.network);
-        let response = await provider.indexerClient.getTokenData(props.token_id);
+        let response = await provider.getTokenData(props.token_id);
         try {
             let token_data = response.current_token_datas_v2[0];
             const item: Token = {
