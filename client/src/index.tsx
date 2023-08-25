@@ -29,7 +29,7 @@ import {TokenDetails} from "./pages/Token";
 import {Buffer as BufferPolyFill} from 'buffer';
 import {IdentityConnectWallet} from "@identity-connect/wallet-adapter-plugin"
 
-const icDappId = '89016ba8-b4e1-4ddf-9c59-3b406b5b5e2a';
+const icDappId = '9cfd33d8-80a9-4e0b-9c7b-195e8a241aa0';
 
 window.Buffer = BufferPolyFill;
 
