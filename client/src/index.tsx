@@ -13,7 +13,6 @@ import {PontemWallet} from "@pontem/wallet-adapter-plugin";
 import {RiseWallet} from "@rise-wallet/wallet-adapter";
 import {TokenPocketWallet} from "@tp-lab/aptos-wallet-adapter";
 import {TrustWallet} from "@trustwallet/aptos-wallet-adapter";
-import {MSafeWalletAdapter} from "msafe-plugin-wallet-adapter";
 import {WelldoneWallet} from "@welldone-studio/aptos-wallet-adapter";
 
 import {AptosWalletAdapterProvider, NetworkName, useWallet,} from "@aptos-labs/wallet-adapter-react";
@@ -38,7 +37,6 @@ const DEVNET_WALLETS = [
     new PetraWallet(),
     new FewchaWallet(),
     new MartianWallet(),
-    new MSafeWalletAdapter(),
     new NightlyWallet(),
     new OpenBlockWallet(),
     new PontemWallet(),
@@ -55,7 +53,6 @@ const TESTNET_WALLETS = [
     }),
     new FewchaWallet(),
     new MartianWallet(),
-    new MSafeWalletAdapter(),
     new NightlyWallet(),
     new OpenBlockWallet(),
     new PontemWallet(),
@@ -72,7 +69,6 @@ const MAINNET_WALLETS = [
     }),
     new FewchaWallet(),
     new MartianWallet(),
-    new MSafeWalletAdapter(),
     new NightlyWallet(),
     new OpenBlockWallet(),
     new PontemWallet(),
