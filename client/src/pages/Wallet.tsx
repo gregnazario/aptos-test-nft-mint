@@ -1,15 +1,6 @@
 import { Network } from "aptos";
 import React, { Fragment, useEffect, useState } from "react";
 import {
-  ensureImageUri,
-  getProvider,
-  onNumberChange,
-  onStringChange,
-  runTransaction,
-  runViewFunction,
-  TransactionContext,
-} from "../Helper";
-import {
   Alert,
   Button,
   Checkbox,
@@ -25,8 +16,16 @@ import {
   Select,
   Tooltip,
 } from "antd";
-import { Transfer } from "../components/Transfer";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
+import { CheckboxChangeEvent } from "antd/es/checkbox";
+import type { Dayjs } from "dayjs";
+import type { RangeValue } from "rc-picker/lib/interface";
+import dayjs from "dayjs";
+import { useNavigate } from "react-router";
+import { Marketplace as Helper } from "../MarketplaceHelper";
+// eslint-disable-next-line import/no-cycle
+import { EasyBorder } from "..";
+// eslint-disable-next-line import/no-cycle
 import {
   AUCTION,
   DEFAULT_PRICE,
@@ -37,13 +36,18 @@ import {
   V1,
   V2,
 } from "../Marketplace";
-import { Marketplace as Helper } from "../MarketplaceHelper";
-import { CheckboxChangeEvent } from "antd/es/checkbox";
-import { EasyBorder } from "..";
-import type { Dayjs } from "dayjs";
-import type { RangeValue } from "rc-picker/lib/interface";
-import dayjs from "dayjs";
-import { useNavigate } from "react-router";
+// eslint-disable-next-line import/no-cycle
+import { Transfer } from "../components/Transfer";
+import {
+  ensureImageUri,
+  getProvider,
+  onNumberChange,
+  onStringChange,
+  runTransaction,
+  runViewFunction,
+  TransactionContext,
+} from "../Helper";
+/* eslint-disable @typescript-eslint/no-use-before-define */
 
 export type Token = {
   standard: string;
@@ -69,7 +73,9 @@ export const resolveToName = async (maybe_address: string): Promise<string> => {
     if (name != null) {
       return `${name}.apt`;
     }
-  } catch {}
+  } catch {
+    /* swallow error */
+  }
 
   // TODO: Provide useful messages if names don't resolve
   try {
@@ -82,7 +88,9 @@ export const resolveToName = async (maybe_address: string): Promise<string> => {
     if (name != null) {
       return `${name}.apt`;
     }
-  } catch {}
+  } catch {
+    /* swallow error */
+  }
 
   // In all other cases, show the original string
   return maybe_address;
@@ -100,7 +108,9 @@ export const resolveToAddress = async (maybe_name: string): Promise<string> => {
     if (address != null) {
       return address;
     }
-  } catch {}
+  } catch {
+    /* swallow error */
+  }
   // If it can't resolve, act like it's an address
   return maybe_name;
 };
@@ -117,40 +127,42 @@ export function Wallet(props: { network: Network; wallet_address: string }) {
 
   useEffect(() => {
     fetchWalletFirstTime();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.network, props.wallet_address]);
 
   const fetchWalletFirstTime = async () => {
     if (!props.wallet_address) {
       return;
     }
-    let address = await resolveToAddress(props.wallet_address);
-    let name = await resolveToName(address);
+    const address = await resolveToAddress(props.wallet_address);
+    const name = await resolveToName(address);
     setAddress(address);
     setName(name);
     await getTotalNfts(address);
     await fetchWallet(address, name, 0, 10);
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   const getTotalNfts = async (address: string) => {
     if (!address) {
       return;
     }
     try {
-      let numNfts = await getProvider(props.network).getAccountTokensCount(
+      const numNfts = await getProvider(props.network).getAccountTokensCount(
         address,
       );
       setTotalNfts(
         numNfts.current_token_ownerships_v2_aggregate.aggregate?.count ?? 0,
       );
     } catch (error: any) {
-      console.log("Failed to load wallet" + error);
+      console.log(`Failed to load wallet ${error}`);
       setTotalNfts(10);
     }
   };
 
   const fetchWallet = async (
+    // eslint-disable-next-line @typescript-eslint/no-shadow
     address: string,
+    // eslint-disable-next-line @typescript-eslint/no-shadow
     name: string,
     page: number,
     limit: number,
@@ -159,96 +171,98 @@ export function Wallet(props: { network: Network; wallet_address: string }) {
       return;
     }
     try {
-      let tokens_query = await getProvider(props.network).getOwnedTokens(
+      const tokensQuery = await getProvider(props.network).getOwnedTokens(
         address,
         {
           options: {
             offset: page * limit,
-            limit: limit,
+            limit,
           },
         },
       );
 
       // TODO: Revisit this conversion and see if anything else needs to be cleaned up
-      let tokens: Token[] = [];
-      for (const token_data of tokens_query.current_token_ownerships_v2) {
-        if (token_data.token_standard === "v2") {
-          let creator_address =
-            token_data.current_token_data?.current_collection
-              ?.creator_address || "";
-          let collection_name =
-            token_data.current_token_data?.current_collection
-              ?.collection_name || "";
-          let collection_id =
-            token_data.current_token_data?.current_collection?.collection_id ||
+      const tokens: Token[] = [];
+      for (const tokenData of tokensQuery.current_token_ownerships_v2) {
+        if (tokenData.token_standard === "v2") {
+          const creatorAddress =
+            tokenData.current_token_data?.current_collection?.creator_address ||
             "";
-          let name = token_data.current_token_data?.token_name || "";
-          let data_id = token_data.current_token_data?.token_data_id || "";
-          let uri = token_data.current_token_data?.token_uri || "";
+          const collectionName =
+            tokenData.current_token_data?.current_collection?.collection_name ||
+            "";
+          const collectionId =
+            tokenData.current_token_data?.current_collection?.collection_id ||
+            "";
+          // eslint-disable-next-line @typescript-eslint/no-shadow
+          const name = tokenData.current_token_data?.token_name || "";
+          const dataId = tokenData.current_token_data?.token_data_id || "";
+          const uri = tokenData.current_token_data?.token_uri || "";
           let type = "NFT";
-          if (token_data.is_soulbound_v2 && token_data.is_fungible_v2) {
+          if (tokenData.is_soulbound_v2 && tokenData.is_fungible_v2) {
             type = "Soulbound Fungible Token";
-          } else if (token_data.is_soulbound_v2) {
+          } else if (tokenData.is_soulbound_v2) {
             type = "Soulbound NFT";
-          } else if (token_data.is_fungible_v2) {
+          } else if (tokenData.is_fungible_v2) {
             // Fungible will also skip for now in this demo
             type = "Fungible Token";
           }
           tokens.push({
             standard: "V2",
-            collection: collection_name,
-            collection_id,
-            name: name,
-            data_id: data_id,
-            uri: uri,
-            type: type,
+            collection: collectionName,
+            collection_id: collectionId,
+            name,
+            data_id: dataId,
+            uri,
+            type,
             property_version: "",
-            creator_address: creator_address,
+            creator_address: creatorAddress,
           });
         } else {
           // Handle V1
-          let collection_creator =
-            token_data.current_token_data?.current_collection
-              ?.creator_address || "";
-          let collection_name =
-            token_data.current_token_data?.current_collection
-              ?.collection_name || "";
-          let collection_id =
-            token_data.current_token_data?.current_collection?.collection_id ||
+          const collectionCreator =
+            tokenData.current_token_data?.current_collection?.creator_address ||
             "";
-          let name = token_data.current_token_data?.token_name || "";
-          let data_id = token_data.current_token_data?.token_data_id || "";
-          let uri = token_data.current_token_data?.token_uri || "";
+          const collectionName =
+            tokenData.current_token_data?.current_collection?.collection_name ||
+            "";
+          const collectionId =
+            tokenData.current_token_data?.current_collection?.collection_id ||
+            "";
+          // eslint-disable-next-line @typescript-eslint/no-shadow
+          const name = tokenData.current_token_data?.token_name || "";
+          const dataId = tokenData.current_token_data?.token_data_id || "";
+          let uri = tokenData.current_token_data?.token_uri || "";
 
           // Support URI in metadata
           // TODO: Verify all image endings
           try {
+            // eslint-disable-next-line no-await-in-loop
             uri = await ensureImageUri(uri);
           } catch (error: any) {
             console.log(`Failed to query ${uri} ${error}`);
           }
 
-          let property_version =
-            token_data.current_token_data?.largest_property_version_v1 || 0;
-          let type = "NFT"; // TODO: Handle fungible
+          const propertyVersion =
+            tokenData.current_token_data?.largest_property_version_v1 || 0;
+          const type = "NFT"; // TODO: Handle fungible
           tokens.push({
             standard: "V1",
-            collection: collection_name,
-            collection_id,
-            name: name,
-            data_id: data_id,
-            uri: uri,
-            type: type,
-            property_version: property_version,
-            creator_address: collection_creator,
+            collection: collectionName,
+            collection_id: collectionId,
+            name,
+            data_id: dataId,
+            uri,
+            type,
+            property_version: propertyVersion,
+            creator_address: collectionCreator,
           });
         }
       }
 
-      setWallet({ error: undefined, tokens: tokens });
-      return;
+      setWallet({ error: undefined, tokens });
     } catch (error: any) {
-      console.log(`Failed to load wallet ${address}` + error);
+      console.log(`Failed to load wallet ${address} ${error}`);
       setWallet({
         error: `Failed to load wallet ${error.toString()}`,
         tokens: [],
@@ -278,20 +292,19 @@ export function Wallet(props: { network: Network; wallet_address: string }) {
                   return (
                     <WalletItem address={address} ctx={null} item={item} />
                   );
-                } else {
-                  return (
-                    <WalletItem
-                      address={address}
-                      ctx={{
-                        account: walletContextState.account,
-                        network: props.network,
-                        submitTransaction:
-                          walletContextState.signAndSubmitTransaction,
-                      }}
-                      item={item}
-                    />
-                  );
                 }
+                return (
+                  <WalletItem
+                    address={address}
+                    ctx={{
+                      account: walletContextState.account,
+                      network: props.network,
+                      submitTransaction:
+                        walletContextState.signAndSubmitTransaction,
+                    }}
+                    item={item}
+                  />
+                );
               })}
               <Col span={1} />
             </Row>
@@ -385,6 +398,7 @@ function WalletItem(props: {
               width={150}
               src={props.item.uri}
               alt={props.item.name}
+              /* eslint-disable-next-line max-len */
               fallback="data:image/png;base64,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"
             />
           </Tooltip>
@@ -528,13 +542,12 @@ export function V1FixedListing(props: {
     if (props.submit) {
       createV1Listing();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.submit]);
 
   const createV1Listing = async () => {
     // Ensure you're logged in
-    if (!props.ctx.account) return [];
-    const payload = await MARKETPLACE_HELPER.initFixedPriceListingForTokenv1(
+    if (!props.ctx.account) return;
+    const payload = MARKETPLACE_HELPER.initFixedPriceListingForTokenv1(
       props.item.creator_address,
       props.item.collection,
       props.item.name,
@@ -545,10 +558,10 @@ export function V1FixedListing(props: {
     );
 
     try {
-      let txn = await runTransaction(props.ctx, payload);
+      const txn = await runTransaction(props.ctx, payload);
       if (txn) {
         let address = "unknown";
-        for (let event of txn.events) {
+        for (const event of txn.events) {
           if (event.type === "0x1::object::TransferEvent") {
             address = event.data.to;
             break;
@@ -610,12 +623,11 @@ export function V1AuctionListing(props: {
     if (props.submit) {
       createV1Listing();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.submit]);
 
   const createV1Listing = async () => {
     // Ensure you're logged in
-    if (!props.ctx.account) return [];
+    if (!props.ctx.account) return;
 
     // Ensure that fields are set to a value
     if (
@@ -632,7 +644,7 @@ export function V1AuctionListing(props: {
       buyNow = undefined;
     }
 
-    const payload = await MARKETPLACE_HELPER.initAuctionListingForTokenv1(
+    const payload = MARKETPLACE_HELPER.initAuctionListingForTokenv1(
       props.item.creator_address,
       props.item.collection,
       props.item.name,
@@ -647,10 +659,10 @@ export function V1AuctionListing(props: {
     );
 
     try {
-      let txn = await runTransaction(props.ctx, payload);
+      const txn = await runTransaction(props.ctx, payload);
       if (txn) {
         let address = "unknown";
-        for (let event of txn.events) {
+        for (const event of txn.events) {
           if (event.type === "0x1::object::TransferEvent") {
             address = event.data.to;
             break;
@@ -680,6 +692,7 @@ export function V1AuctionListing(props: {
 
   const onTimeChange = (
     time: RangeValue<Dayjs>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _dateString: [string, string],
   ) => {
     if (!time || !time[0] || !time[1]) return;
@@ -804,12 +817,11 @@ export function V2AuctionListing(props: {
     if (props.submit) {
       createV1Listing();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.submit]);
 
   const createV1Listing = async () => {
     // Ensure you're logged in
-    if (!props.ctx.account) return [];
+    if (!props.ctx.account) return;
 
     // Ensure that fields are set to a value
     if (
@@ -838,10 +850,10 @@ export function V2AuctionListing(props: {
     );
 
     try {
-      let txn = await runTransaction(props.ctx, payload);
+      const txn = await runTransaction(props.ctx, payload);
       if (txn) {
         let address = "unknown";
-        for (let event of txn.events) {
+        for (const event of txn.events) {
           if (event.type === "0x1::object::TransferEvent") {
             address = event.data.to;
             break;
@@ -871,6 +883,7 @@ export function V2AuctionListing(props: {
 
   const onTimeChange = (
     time: RangeValue<Dayjs>,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _dateString: [string, string],
   ) => {
     if (!time || !time[0] || !time[1]) return;
@@ -989,13 +1002,12 @@ export function V2FixedListing(props: {
     if (props.submit) {
       createV2Listing();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.submit]);
 
   const createV2Listing = async () => {
     // Ensure you're logged in
-    if (!props.ctx.account) return [];
-    const payload = await MARKETPLACE_HELPER.initFixedPriceListing(
+    if (!props.ctx.account) return;
+    const payload = MARKETPLACE_HELPER.initFixedPriceListing(
       props.item.data_id,
       feeScheduleAddress,
       BigInt(Math.floor(new Date().getTime() / 1000)),
@@ -1003,10 +1015,10 @@ export function V2FixedListing(props: {
     );
 
     try {
-      let txn = await runTransaction(props.ctx, payload);
+      const txn = await runTransaction(props.ctx, payload);
       if (txn) {
         let address = "unknown";
-        for (let event of txn.events) {
+        for (const event of txn.events) {
           if (event.type === "0x1::object::TransferEvent") {
             address = event.data.to;
             break;

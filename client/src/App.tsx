@@ -2,8 +2,9 @@ import { Layout } from "antd";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
 import { Network } from "aptos";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
+// eslint-disable-next-line import/no-cycle
 import Marketplace from "./Marketplace";
-import { NetworkChecker } from "./index";
+import { NetworkChecker } from ".";
 
 function App(props: { expectedNetwork: Network }) {
   const { account, signAndSubmitTransaction } = useWallet();

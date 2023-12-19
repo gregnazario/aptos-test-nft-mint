@@ -3,6 +3,8 @@ import {
   AccountInfo,
   TransactionOptions,
 } from "@aptos-labs/wallet-adapter-core";
+import React from "react";
+/* eslint-disable @typescript-eslint/no-use-before-define */
 
 /*
  * A helper central place for common code across components
@@ -25,9 +27,11 @@ export type SubmitTransaction = <T extends Types.TransactionPayload>(
 export const getProvider = (network: Network) => {
   if (network === Network.MAINNET) {
     return MAINNET_PROVIDER;
-  } else if (network === Network.TESTNET) {
+  }
+  if (network === Network.TESTNET) {
     return TESTNET_PROVIDER;
-  } else if (network === Network.DEVNET) {
+  }
+  if (network === Network.DEVNET) {
     return DEVNET_PROVIDER;
   }
   throw new Error("Unknown network type");
@@ -41,12 +45,12 @@ export const runTransaction = async <T extends Types.TransactionPayload>(
     const provider = getProvider(txnContext.network);
     const response = await txnContext.submitTransaction(payload);
     await provider.aptosClient.waitForTransaction(response.hash);
-    let txn = (await provider.aptosClient.getTransactionByHash(
+    return (await provider.aptosClient.getTransactionByHash(
       response.hash,
     )) as any;
-    return txn;
   } catch (error: any) {
-    console.log("Failed to wait for txn" + error);
+    // eslint-disable-next-line no-console
+    console.log(`Failed to wait for txn ${error}`);
   }
 
   return undefined;
@@ -73,7 +77,8 @@ export const runViewFunction = async (
     const provider = getProvider(txnContext.network);
     return await provider.aptosClient.view(payload);
   } catch (error: any) {
-    console.log("Failed to wait for txn" + error);
+    // eslint-disable-next-line no-console
+    console.log(`Failed to wait for txn ${error}`);
   }
 
   return undefined;
@@ -109,19 +114,22 @@ export const ensureImageUri = async (uri: string) => {
     return uri;
   }
   try {
+    let newUri = uri;
     if (
       !uri.endsWith(".jpg") &&
       !uri.endsWith(".jpeg") &&
       !uri.endsWith(".png") &&
       !uri.endsWith(".svg")
     ) {
-      uri = ensureHttps(uri);
-      let response = await fetch(uri);
+      newUri = ensureHttps(uri);
+      const response = await fetch(uri);
       const data = await response.json();
       if (data.image) {
-        uri = ensureHttps(data.image);
+        newUri = ensureHttps(data.image);
       }
     }
+
+    return newUri;
   } catch (error: any) {
     // Let the URI stay as the old one for now
   }
@@ -129,8 +137,9 @@ export const ensureImageUri = async (uri: string) => {
 };
 
 export const ensureHttps = (uri: string): string => {
+  let newUri = uri;
   if (uri.startsWith("ipfs://")) {
-    uri = uri.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/");
+    newUri = uri.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/");
   }
-  return uri;
+  return newUri;
 };

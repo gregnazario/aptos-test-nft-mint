@@ -1,7 +1,6 @@
 import React, { Fragment, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
-import App from "./App";
 import { BloctoWallet } from "@blocto/aptos-wallet-adapter-plugin";
 import { FewchaWallet } from "fewcha-plugin-wallet-adapter";
 import { MartianWallet } from "@martianwallet/aptos-wallet-adapter";
@@ -27,16 +26,23 @@ import { Network } from "aptos";
 import { createBrowserHistory } from "history";
 import { Route, Routes, useNavigate, useParams } from "react-router";
 import { BrowserRouter } from "react-router-dom";
-import { Wallet } from "./pages/Wallet";
 import { WalletSelector } from "@aptos-labs/wallet-adapter-ant-design";
-import Launchpad from "./pages/Launchpad";
-import { TokenDetails } from "./pages/Token";
 import { Buffer as BufferPolyFill } from "buffer";
 import { IdentityConnectWallet } from "@identity-connect/wallet-adapter-plugin";
+// eslint-disable-next-line import/no-cycle
+import App from "./App";
+// eslint-disable-next-line import/no-cycle
+import { TokenDetails } from "./pages/Token";
+// eslint-disable-next-line import/no-cycle
+import Launchpad from "./pages/Launchpad";
+// eslint-disable-next-line import/no-cycle
+import { Wallet } from "./pages/Wallet";
 
 const icDappId = "9cfd33d8-80a9-4e0b-9c7b-195e8a241aa0";
 
 window.Buffer = BufferPolyFill;
+
+/* eslint-disable @typescript-eslint/no-use-before-define */
 
 const DEVNET_WALLETS = [
   new IdentityConnectWallet(icDappId, { networkName: NetworkName.Devnet }),
@@ -126,7 +132,7 @@ function Selector(this: any) {
       browserHistory.push(`?network=${Network.MAINNET}`);
     }
   });
-  //<Route path="/collection/:collection_id" element={<Wallet network={network}/>}/>
+  // <Route path="/collection/:collection_id" element={<Wallet network={network}/>}/>
   return (
     <>
       <BrowserRouter>
@@ -196,7 +202,7 @@ function AppPage(props: { network: Network }) {
 
 export function WalletPage(props: { network: Network }) {
   // FIXME: Allow input of wallet on page, with setting url
-  let { wallet_address } = useParams();
+  const { wallet_address } = useParams();
   return (
     <Fragment key={"wallet_page"}>
       {props.network === Network.DEVNET && (
@@ -384,7 +390,7 @@ export function NetworkChecker(props: {
   expectedNetwork: Network;
   children?: React.ReactNode;
 }) {
-  let walletContextState = useWallet();
+  const walletContextState = useWallet();
   const isSelectedNetwork = (): boolean => {
     return (
       walletContextState.network?.name?.toLowerCase() ===

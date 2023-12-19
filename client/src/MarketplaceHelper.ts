@@ -220,6 +220,7 @@ const LISTING: string = "listing";
  */
 export class Marketplace {
   readonly provider: Provider;
+
   readonly code_location: HexString;
 
   constructor(provider: Provider, code_location: MaybeHexString) {
@@ -690,7 +691,7 @@ export class Marketplace {
     feeSchedule: MaybeHexString,
     ledgerVersion?: bigint,
   ): Promise<HexString> {
-    let outputs = await this.view(
+    const outputs = await this.view(
       FEE_SCHEDULE,
       "fee_address",
       [],
@@ -705,7 +706,7 @@ export class Marketplace {
     feeSchedule: MaybeHexString,
     ledgerVersion?: bigint,
   ): Promise<bigint> {
-    let outputs = await this.view(
+    const outputs = await this.view(
       FEE_SCHEDULE,
       "listing_fee",
       [],
@@ -720,7 +721,7 @@ export class Marketplace {
     feeSchedule: MaybeHexString,
     ledgerVersion?: bigint,
   ): Promise<bigint> {
-    let outputs = await this.view(
+    const outputs = await this.view(
       FEE_SCHEDULE,
       "bidding_fee",
       [],
@@ -736,7 +737,7 @@ export class Marketplace {
     price: bigint,
     ledgerVersion?: bigint,
   ): Promise<bigint> {
-    let outputs = await this.view(
+    const outputs = await this.view(
       FEE_SCHEDULE,
       "commission",
       [],
@@ -761,12 +762,12 @@ export class Marketplace {
       contract_address: HexString.ensure(contractAddress).hex(),
       fee_schedule_id: feeScheduleId,
     };
-    let indexerResponse = await this.queryIndexer<ListingsQueryResponse>(
+    const indexerResponse = await this.queryIndexer<ListingsQueryResponse>(
       LISTINGS_ALL_QUERY,
       variables,
     );
 
-    let listings: Array<Listing> = [];
+    const listings: Array<Listing> = [];
     for (const listing of indexerResponse.nft_marketplace_v2_current_nft_marketplace_listings) {
       listings.push({
         creator_address:
@@ -801,7 +802,7 @@ export class Marketplace {
       contract_address: HexString.ensure(contractAddress).hex(),
       fee_schedule_id: feeScheduleId,
     };
-    let result = await this.queryIndexer<AuctionsQueryResponse>(
+    const result = await this.queryIndexer<AuctionsQueryResponse>(
       AUCTIONS_QUERY,
       variables,
     );
@@ -815,15 +816,15 @@ export class Marketplace {
   ): Promise<Array<TokenOffer>> {
     const variables = {
       contract_address: HexString.ensure(contractAddress).hex(),
-      marketplace: marketplace,
+      marketplace,
       token_id: HexString.ensure(tokenAddress).hex(),
     };
 
-    let response: TokenOfferIndexerResponse = await this.queryIndexer(
+    const response: TokenOfferIndexerResponse = await this.queryIndexer(
       TOKEN_OFFERS_QUERY,
       variables,
     );
-    let offers = [];
+    const offers = [];
     for (const offer of response.nft_marketplace_v2_current_nft_marketplace_token_offers) {
       offers.push({
         buyer: offer.buyer,
@@ -883,7 +884,7 @@ export class Marketplace {
             }`;
     const variables = {
       contract_address: HexString.ensure(contractAddress).hex(),
-      marketplace: marketplace,
+      marketplace,
       collection_id: HexString.ensure(collectionAddress).hex(),
       is_deleted: isDeleted,
     };
@@ -909,7 +910,7 @@ export class Marketplace {
   async queryIndexer<T>(query: string, variables?: {}): Promise<T> {
     const graphqlQuery = {
       query,
-      variables: variables,
+      variables,
     };
     return this.provider.queryIndexer(graphqlQuery);
   }
@@ -921,7 +922,7 @@ export class Marketplace {
     args: any[],
     ledgerVersion?: bigint,
   ) {
-    return await this.provider.view(
+    return this.provider.view(
       {
         function: `${this.code_location}::${module}::${func}`,
         type_arguments: typeArguments,

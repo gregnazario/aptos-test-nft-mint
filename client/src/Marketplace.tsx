@@ -11,7 +11,9 @@ import {
   Tooltip,
 } from "antd";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { Network } from "aptos";
+import { Link } from "react-router-dom";
 import {
   Listing,
   Marketplace as Helper,
@@ -26,10 +28,12 @@ import {
   getProvider,
   ensureImageUri,
 } from "./Helper";
-import { Network } from "aptos";
+// eslint-disable-next-line import/no-cycle
 import { resolveToName } from "./pages/Wallet";
-import { Link } from "react-router-dom";
-import { EasyBorder } from "./index";
+// eslint-disable-next-line import/no-cycle
+import { EasyBorder } from ".";
+
+/* eslint-disable @typescript-eslint/no-use-before-define */
 
 export const MODULE_ADDRESS =
   "0x6de37368e31dff4580b211295198159ee6f98b42ffa93c5683bb955ca1be67e0";
@@ -39,9 +43,6 @@ export const TESTNET_FEE_SCHEDULE =
   "0xc261491e35296ffbb760715c2bb83b87ced70029e82e100ff53648b2f9e1a598";
 export const MAINNET_ZERO_FEE_SCHEDULE =
   "0x8bff03d355bb35d2293ae5be7b04b9648be2f3694fb3fc537267ecb563743e00";
-export const DEFAULT_COLLECTION = "Test Collection";
-export const DEFAULT_TOKEN_NAME = "Test Token #1";
-export const DEFAULT_PROPERTY_VERSION = 0;
 export const DEFAULT_PRICE = "100000000";
 
 const APT = 100000000;
@@ -55,13 +56,15 @@ export const COLLECTION_OFFERS = "Collection Offers";
 export const defaultFeeSchedule = (network: Network) => {
   if (network === Network.MAINNET) {
     return MAINNET_ZERO_FEE_SCHEDULE;
-  } else if (network === Network.TESTNET) {
-    return TESTNET_FEE_SCHEDULE;
-  } else if (network === Network.DEVNET) {
-    return DEVNET_FEE_SCHEDULE;
-  } else {
-    throw new Error("Unsupported network");
   }
+  if (network === Network.TESTNET) {
+    return TESTNET_FEE_SCHEDULE;
+  }
+  if (network === Network.DEVNET) {
+    return DEVNET_FEE_SCHEDULE;
+  }
+
+  throw new Error("Unsupported network");
 };
 
 function Marketplace(props: TransactionContext) {
@@ -82,30 +85,30 @@ function Marketplace(props: TransactionContext) {
   }>();
 
   useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
     loadFeeSchedule();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.account]);
 
   const loadFeeSchedule = async () => {
     // Ensure you're logged in
-    if (!props.account) return [];
+    if (!props.account) return;
 
     try {
-      let fee_address = await MARKETPLACE_HELPER.feeAddress(feeSchedule);
-      let listing_fee = await MARKETPLACE_HELPER.listingFee(feeSchedule);
-      let bidding_fee = await MARKETPLACE_HELPER.biddingFee(feeSchedule);
-      let commission = await MARKETPLACE_HELPER.commission(
+      const feeAddress = await MARKETPLACE_HELPER.feeAddress(feeSchedule);
+      const listingFee = await MARKETPLACE_HELPER.listingFee(feeSchedule);
+      const biddingFee = await MARKETPLACE_HELPER.biddingFee(feeSchedule);
+      const commission = await MARKETPLACE_HELPER.commission(
         feeSchedule,
         BigInt(DEFAULT_PRICE),
       );
-      let name = await resolveToName(fee_address.hex());
+      const name = await resolveToName(feeAddress.hex());
 
       setFeeScheduleDetails({
         name,
         error: null,
-        fee_address: fee_address.hex(),
-        listing_fee: listing_fee.toString(),
-        bidding_fee: bidding_fee.toString(),
+        fee_address: feeAddress.hex(),
+        listing_fee: listingFee.toString(),
+        bidding_fee: biddingFee.toString(),
         commission: commission.toString(),
       });
     } catch (error: any) {
@@ -142,7 +145,7 @@ function Marketplace(props: TransactionContext) {
               feeScheduleDetails?.commission === "0" && (
                 <Alert
                   type="info"
-                  message={`Zero fees! (Creator Royalties still apply)`}
+                  message={"Zero fees! (Creator Royalties still apply)"}
                 />
               )}
             {(feeScheduleDetails?.listing_fee !== "0" ||
@@ -305,26 +308,25 @@ function AuctionListingManagement(props: TransactionContext) {
   const completeAuction = async () => {
     // Ensure you're logged in
     if (!props.account || !listingAddress) return [];
-    const payload =
-      await MARKETPLACE_HELPER.completeAuctionListing(listingAddress);
-    await runTransaction(props, payload);
+    const payload = MARKETPLACE_HELPER.completeAuctionListing(listingAddress);
+    return runTransaction(props, payload);
   };
 
   const bidAuction = async () => {
     // Ensure you're logged in
     if (!props.account || !listingAddress) return [];
-    const payload = await MARKETPLACE_HELPER.bidAuctionListing(
+    const payload = MARKETPLACE_HELPER.bidAuctionListing(
       listingAddress,
       bidAmount,
     );
-    await runTransaction(props, payload);
+    return runTransaction(props, payload);
   };
 
   const buyNowAuction = async () => {
     // Ensure you're logged in
     if (!props.account || !listingAddress) return [];
-    const payload = await MARKETPLACE_HELPER.purchaseListing(listingAddress);
-    await runTransaction(props, payload);
+    const payload = MARKETPLACE_HELPER.purchaseListing(listingAddress);
+    return runTransaction(props, payload);
   };
 
   return (
@@ -408,7 +410,7 @@ function ExtractTokenV1(props: TransactionContext) {
     // Ensure you're logged in
     if (!props.account || !objectAddress) return [];
     const payload = await MARKETPLACE_HELPER.extract_tokenv1(objectAddress);
-    await runTransaction(props, payload);
+    return runTransaction(props, payload);
   };
 
   return (
@@ -457,16 +459,17 @@ function Listings(props: { ctx: TransactionContext; feeSchedule: string }) {
 
   useEffect(() => {
     loadListings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.ctx.account, props.feeSchedule]);
 
   const loadListings = async () => {
     try {
-      let listings = await MARKETPLACE_HELPER.getListings(
+      // eslint-disable-next-line @typescript-eslint/no-shadow
+      const listings = await MARKETPLACE_HELPER.getListings(
         MODULE_ADDRESS,
         props.feeSchedule,
       );
-      for (let listing of listings) {
+      for (const listing of listings) {
+        // eslint-disable-next-line no-await-in-loop
         listing.token_uri = await ensureImageUri(listing.token_uri);
       }
       setListingsError("");
@@ -498,9 +501,9 @@ function Listings(props: { ctx: TransactionContext; feeSchedule: string }) {
       <Row align="middle">
         <Col span={8}>
           {!listingsError &&
-            listings?.map((listing) => {
-              return <ListingView listing={listing} ctx={props.ctx} />;
-            })}
+            listings?.map((listing) => (
+              <ListingView listing={listing} ctx={props.ctx} />
+            ))}
           {listingsError && <Alert type="error" message={listingsError} />}
         </Col>
       </Row>
@@ -522,16 +525,15 @@ function ListingView(props: { ctx: TransactionContext; listing: Listing }) {
   const cancelListing = async (listingAddress: string) => {
     // Ensure you're logged in
     if (!props.ctx.account) return [];
-    const payload =
-      await MARKETPLACE_HELPER.endFixedPriceListing(listingAddress);
-    await runTransaction(props.ctx, payload);
+    const payload = MARKETPLACE_HELPER.endFixedPriceListing(listingAddress);
+    return runTransaction(props.ctx, payload);
   };
 
   const purchaseListing = async (listingAddress: string) => {
     // Ensure you're logged in
     if (!props.ctx.account) return [];
-    const payload = await MARKETPLACE_HELPER.purchaseListing(listingAddress);
-    await runTransaction(props.ctx, payload);
+    const payload = MARKETPLACE_HELPER.purchaseListing(listingAddress);
+    return runTransaction(props.ctx, payload);
   };
 
   return (
@@ -583,16 +585,15 @@ function ListingActions(props: { ctx: TransactionContext }) {
   const cancelListing = async (listingAddress: string) => {
     // Ensure you're logged in
     if (!props.ctx.account) return [];
-    const payload =
-      await MARKETPLACE_HELPER.endFixedPriceListing(listingAddress);
-    await runTransaction(props.ctx, payload);
+    const payload = MARKETPLACE_HELPER.endFixedPriceListing(listingAddress);
+    return runTransaction(props.ctx, payload);
   };
 
   const purchaseListing = async (listingAddress: string) => {
     // Ensure you're logged in
     if (!props.ctx.account) return [];
-    const payload = await MARKETPLACE_HELPER.purchaseListing(listingAddress);
-    await runTransaction(props.ctx, payload);
+    const payload = MARKETPLACE_HELPER.purchaseListing(listingAddress);
+    return runTransaction(props.ctx, payload);
   };
   return (
     <Row align="middle">
@@ -664,16 +665,16 @@ function AuctionListings(props: {
 
   useEffect(() => {
     loadListings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.ctx.account, props.feeSchedule]);
 
   const loadListings = async () => {
     try {
-      let listings = await MARKETPLACE_HELPER.getAuctions(
+      // eslint-disable-next-line @typescript-eslint/no-shadow
+      const listings = await MARKETPLACE_HELPER.getAuctions(
         MODULE_ADDRESS,
         props.feeSchedule,
       );
-      let parsed = [];
+      const parsed = [];
       for (const listing of listings) {
         parsed.push({
           buy_it_now_price: listing.buy_it_now_price,
@@ -689,6 +690,7 @@ function AuctionListings(props: {
           collection_id: listing.current_token_data.collection_id,
           token_data_id: listing.current_token_data.token_data_id,
           token_name: listing.current_token_data.token_name,
+          // eslint-disable-next-line no-await-in-loop
           token_uri: await ensureImageUri(
             listing.current_token_data?.token_uri,
           ),
@@ -709,25 +711,24 @@ function AuctionListings(props: {
   const cancelListing = async (listingAddress: string) => {
     // Ensure you're logged in
     if (!props.ctx.account) return [];
-    const payload =
-      await MARKETPLACE_HELPER.endFixedPriceListing(listingAddress);
-    await runTransaction(props.ctx, payload);
+    const payload = MARKETPLACE_HELPER.endFixedPriceListing(listingAddress);
+    return runTransaction(props.ctx, payload);
   };
 
   const purchaseListing = async (listingAddress: string) => {
     // Ensure you're logged in
     if (!props.ctx.account) return [];
-    const payload = await MARKETPLACE_HELPER.purchaseListing(listingAddress);
-    await runTransaction(props.ctx, payload);
+    const payload = MARKETPLACE_HELPER.purchaseListing(listingAddress);
+    return runTransaction(props.ctx, payload);
   };
   const bidListing = async (listingAddress: string) => {
     // Ensure you're logged in
     if (!props.ctx.account) return [];
-    const payload = await MARKETPLACE_HELPER.bidAuctionListing(
+    const payload = MARKETPLACE_HELPER.bidAuctionListing(
       listingAddress,
       BigInt(bidAmount),
     );
-    await runTransaction(props.ctx, payload);
+    return runTransaction(props.ctx, payload);
   };
 
   return (
@@ -752,27 +753,17 @@ function AuctionListings(props: {
             <ol>
               {listings?.map(
                 ({
-                  buy_it_now_price,
                   starting_bid_price,
                   current_bid_price,
-                  current_bidder,
-                  expiration_time,
                   listing_id,
-                  creator_address,
-                  collection_name,
-                  collection_id,
-                  token_data_id,
                   token_name,
                   token_uri,
-                  token_amount,
                   seller,
-                  contract_address,
-                  fee_schedule_id,
                 }) => (
                   <li>
                     <Row align="middle">
                       <Col>
-                        <Tooltip placement="right" title={``}>
+                        <Tooltip placement="right" title={""}>
                           <b>Listing {listing_id}</b> - {token_name} -{" "}
                           {toApt(current_bid_price ?? starting_bid_price)} APT |
                           Sold by {seller}
@@ -841,28 +832,28 @@ function AuctionActions(props: { ctx: TransactionContext }) {
     MODULE_ADDRESS,
   );
 
+  // eslint-disable-next-line @typescript-eslint/no-shadow
   const bidListing = async (listingAddress: string, bidAmount: bigint) => {
     // Ensure you're logged in
     if (!props.ctx.account) return [];
-    const payload = await MARKETPLACE_HELPER.bidAuctionListing(
+    const payload = MARKETPLACE_HELPER.bidAuctionListing(
       listingAddress,
       bidAmount,
     );
-    await runTransaction(props.ctx, payload);
+    return runTransaction(props.ctx, payload);
   };
 
   const buyNowListing = async (listingAddress: string) => {
     // Ensure you're logged in
     if (!props.ctx.account) return [];
-    const payload = await MARKETPLACE_HELPER.purchaseListing(listingAddress);
-    await runTransaction(props.ctx, payload);
+    const payload = MARKETPLACE_HELPER.purchaseListing(listingAddress);
+    return runTransaction(props.ctx, payload);
   };
   const completeListing = async (listingAddress: string) => {
     // Ensure you're logged in
     if (!props.ctx.account) return [];
-    const payload =
-      await MARKETPLACE_HELPER.completeAuctionListing(listingAddress);
-    await runTransaction(props.ctx, payload);
+    const payload = MARKETPLACE_HELPER.completeAuctionListing(listingAddress);
+    return runTransaction(props.ctx, payload);
   };
   return (
     <>
@@ -941,15 +932,15 @@ function V2TokenOffers(props: TransactionContext) {
   const createTokenOffer = async () => {
     // Ensure you're logged in
     if (!props.account || !tokenAddress) return [];
-    const expiration_time =
+    const expirationTime =
       BigInt(Math.floor(new Date().getTime() / 1000)) + expirationSecs;
-    const payload = await MARKETPLACE_HELPER.initTokenOfferForTokenv2(
+    const payload = MARKETPLACE_HELPER.initTokenOfferForTokenv2(
       tokenAddress,
       feeSchedule,
       price,
-      expiration_time,
+      expirationTime,
     );
-    await runTransaction(props, payload);
+    return runTransaction(props, payload);
   };
 
   return (
@@ -1034,16 +1025,16 @@ function V2CollectionOffers(props: TransactionContext) {
   const createCollectionOffer = async () => {
     // Ensure you're logged in
     if (!props.account || !collectionAddress) return [];
-    const expiration_time =
+    const expirationTime =
       BigInt(Math.floor(new Date().getTime() / 1000)) + expirationSecs;
-    const payload = await MARKETPLACE_HELPER.initCollectionOfferForTokenv2(
+    const payload = MARKETPLACE_HELPER.initCollectionOfferForTokenv2(
       collectionAddress,
       feeSchedule,
       price,
       amount,
-      expiration_time,
+      expirationTime,
     );
-    await runTransaction(props, payload);
+    return runTransaction(props, payload);
   };
 
   return (
@@ -1139,7 +1130,8 @@ function TokenOffers(props: TransactionContext) {
   const [tokenAddress, setTokenAddress] = useState<string>("");
 
   const loadTokenOffers = async () => {
-    let tokenOffers = await MARKETPLACE_HELPER.getTokenOffers(
+    // eslint-disable-next-line @typescript-eslint/no-shadow
+    const tokenOffers = await MARKETPLACE_HELPER.getTokenOffers(
       MODULE_ADDRESS,
       "example_v2_marketplace",
       tokenAddress,
@@ -1180,11 +1172,7 @@ function TokenOffers(props: TransactionContext) {
         </Col>
       </Row>
       <Row align="middle">
-        <Col>
-          {tokenOffers?.map((offer) => {
-            return <TokenOfferV2 offer={offer} />;
-          })}
-        </Col>
+        <Col>{tokenOffers?.map((offer) => <TokenOfferV2 offer={offer} />)}</Col>
       </Row>
     </>
   );
@@ -1233,31 +1221,31 @@ function CollectionOffers(props: TransactionContext) {
   const [tokenAddress, setTokenAddress] = useState<string>("");
 
   const loadCollectionOffers = async () => {
-    let collectionOffers = await MARKETPLACE_HELPER.getCollectionOffers(
+    // eslint-disable-next-line @typescript-eslint/no-shadow
+    const collectionOffers = await MARKETPLACE_HELPER.getCollectionOffers(
       MODULE_ADDRESS,
       "example_v2_marketplace",
       collectionAddress,
       false,
     );
-    setCollectionOffers(collectionOffers);
+    return setCollectionOffers(collectionOffers);
   };
 
   const fillCollectionOffer = async (offerAddress: string) => {
     // Ensure you're logged in
     if (!props.account || !offerAddress) return [];
-    const payload = await MARKETPLACE_HELPER.fillCollectionOfferForTokenv2(
+    const payload = MARKETPLACE_HELPER.fillCollectionOfferForTokenv2(
       offerAddress,
       tokenAddress,
     );
-    await runTransaction(props, payload);
+    return runTransaction(props, payload);
   };
 
   const cancelCollectionOffer = async (offerAddress: string) => {
     // Ensure you're logged in
     if (!props.account || !offerAddress) return [];
-    const payload =
-      await MARKETPLACE_HELPER.cancelCollectionOffer(offerAddress);
-    await runTransaction(props, payload);
+    const payload = MARKETPLACE_HELPER.cancelCollectionOffer(offerAddress);
+    return runTransaction(props, payload);
   };
 
   return (
@@ -1323,7 +1311,7 @@ function CollectionOffers(props: TransactionContext) {
                 <li>
                   <Row align="middle">
                     <Col>
-                      <Tooltip placement="right" title={``}>
+                      <Tooltip placement="right" title={""}>
                         <Image
                           width={100}
                           src={current_collection.uri}
@@ -1370,8 +1358,6 @@ function CollectionOffers(props: TransactionContext) {
   );
 }
 
-export const toApt = (num: string | number): number => {
-  return Number(num) / APT;
-};
+export const toApt = (num: string | number): number => Number(num) / APT;
 
 export default Marketplace;
