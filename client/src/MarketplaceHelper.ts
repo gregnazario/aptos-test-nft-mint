@@ -3,22 +3,8 @@
 
 /* eslint-disable max-len */
 
-import {
-  AptosClient,
-  AptosAccount,
-  HexString,
-  MaybeHexString,
-  OptionalTransactionArgs,
-  Provider,
-  TransactionBuilderRemoteABI,
-} from "aptos";
-
-type TransactionPayload = {
-  type: string;
-  function: string;
-  type_arguments: string[];
-  arguments: any[];
-};
+import { HexString, MaybeHexString, Provider } from "aptos";
+import { InputTransactionData } from "@aptos-labs/wallet-adapter-core";
 
 type ListingsQueryResponse = {
   nft_marketplace_v2_current_nft_marketplace_listings: Array<ListingIndexer>;
@@ -221,11 +207,11 @@ const LISTING: string = "listing";
 export class Marketplace {
   readonly provider: Provider;
 
-  readonly code_location: HexString;
+  readonly codeLocation: HexString;
 
   constructor(provider: Provider, code_location: MaybeHexString) {
     this.provider = provider;
-    this.code_location = HexString.ensure(code_location);
+    this.codeLocation = HexString.ensure(code_location);
   }
 
   // Coin listing operations
@@ -235,7 +221,7 @@ export class Marketplace {
     startTime: bigint,
     price: bigint,
     coin: string = APTOS_COIN,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       COIN_LISTING,
       "init_fixed_price",
@@ -259,7 +245,7 @@ export class Marketplace {
     minimumBidTimeBeforeEnd: bigint,
     buyItNowPrice?: bigint,
     coin: string = APTOS_COIN,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       COIN_LISTING,
       "init_auction",
@@ -286,7 +272,7 @@ export class Marketplace {
     startTime: bigint,
     price: bigint,
     coin: string = APTOS_COIN,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       COIN_LISTING,
       "init_fixed_price_for_tokenv1",
@@ -316,7 +302,7 @@ export class Marketplace {
     minimumBidTimeBeforeEnd: bigint,
     buyItNowPrice?: bigint,
     coin: string = APTOS_COIN,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       COIN_LISTING,
       "init_auction_for_tokenv1",
@@ -340,7 +326,7 @@ export class Marketplace {
   purchaseListing(
     listing: MaybeHexString,
     coin: string = APTOS_COIN,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       COIN_LISTING,
       "purchase",
@@ -352,7 +338,7 @@ export class Marketplace {
   endFixedPriceListing(
     listing: MaybeHexString,
     coin: string = APTOS_COIN,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       COIN_LISTING,
       "end_fixed_price",
@@ -365,7 +351,7 @@ export class Marketplace {
     listing: MaybeHexString,
     bid_amount: bigint,
     coin: string = APTOS_COIN,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       COIN_LISTING,
       "bid",
@@ -378,7 +364,7 @@ export class Marketplace {
     listing: MaybeHexString,
     bid_amount: bigint,
     coin: string = APTOS_COIN,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       COIN_LISTING,
       "bid",
@@ -390,7 +376,7 @@ export class Marketplace {
   completeAuctionListing(
     listing: MaybeHexString,
     coin: string = APTOS_COIN,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       COIN_LISTING,
       "complete_auction",
@@ -400,7 +386,7 @@ export class Marketplace {
   }
 
   // Listing operations
-  extract_tokenv1(object: MaybeHexString): TransactionPayload {
+  extract_tokenv1(object: MaybeHexString): InputTransactionData {
     return this.buildTransactionPayload(
       LISTING,
       "extract_tokenv1",
@@ -419,7 +405,7 @@ export class Marketplace {
     amount: bigint,
     expiration_time: bigint,
     coin: string = APTOS_COIN,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       COLLECTION_OFFER,
       "init_for_tokenv1_entry",
@@ -442,7 +428,7 @@ export class Marketplace {
     amount: bigint,
     expiration_time: bigint,
     coin: string = APTOS_COIN,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       COLLECTION_OFFER,
       "init_for_tokenv2_entry",
@@ -460,7 +446,7 @@ export class Marketplace {
   cancelCollectionOffer(
     collectionOffer: MaybeHexString,
     coin: string = APTOS_COIN,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       COLLECTION_OFFER,
       "cancel",
@@ -474,7 +460,7 @@ export class Marketplace {
     tokenName: string,
     propertyVersion: bigint,
     coin: string = APTOS_COIN,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       COLLECTION_OFFER,
       "sell_tokenv1_entry",
@@ -491,7 +477,7 @@ export class Marketplace {
     collectionOffer: MaybeHexString,
     token: MaybeHexString,
     coin: string = APTOS_COIN,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       COLLECTION_OFFER,
       "sell_tokenv2",
@@ -507,7 +493,7 @@ export class Marketplace {
     price: bigint,
     expiration_time: bigint,
     coin: string = APTOS_COIN,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       TOKEN_OFFER,
       "init_for_tokenv1_entry",
@@ -528,7 +514,7 @@ export class Marketplace {
     price: bigint,
     expiration_time: bigint,
     coin: string = APTOS_COIN,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       TOKEN_OFFER,
       "init_for_tokenv2_entry",
@@ -545,7 +531,7 @@ export class Marketplace {
   cancelTokenOffer(
     tokenOffer: MaybeHexString,
     coin: string = APTOS_COIN,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       TOKEN_OFFER,
       "cancel",
@@ -559,7 +545,7 @@ export class Marketplace {
     tokenName: string,
     propertyVersion: bigint,
     coin: string = APTOS_COIN,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       TOKEN_OFFER,
       "sell_tokenv1_entry",
@@ -576,7 +562,7 @@ export class Marketplace {
     tokenOffer: MaybeHexString,
     token: MaybeHexString,
     coin: string = APTOS_COIN,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       TOKEN_OFFER,
       "sell_tokenv2",
@@ -593,7 +579,7 @@ export class Marketplace {
     listingFee: bigint,
     commissionDenominator: bigint,
     commissionNumerator: bigint,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       FEE_SCHEDULE,
       "init_entry",
@@ -608,7 +594,7 @@ export class Marketplace {
     );
   }
 
-  initEmptyFeeSchedule(feeAddress: MaybeHexString): TransactionPayload {
+  initEmptyFeeSchedule(feeAddress: MaybeHexString): InputTransactionData {
     return this.buildTransactionPayload(
       FEE_SCHEDULE,
       "empty",
@@ -620,7 +606,7 @@ export class Marketplace {
   setFeeAddress(
     feeSchedule: MaybeHexString,
     feeAddress: MaybeHexString,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       FEE_SCHEDULE,
       "set_fee_address",
@@ -632,7 +618,7 @@ export class Marketplace {
   setFixedRateListingFee(
     feeSchedule: MaybeHexString,
     fee: bigint,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       FEE_SCHEDULE,
       "set_fixed_rate_listing_fee",
@@ -644,7 +630,7 @@ export class Marketplace {
   setFixedRateBiddingFee(
     feeSchedule: MaybeHexString,
     fee: bigint,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       FEE_SCHEDULE,
       "set_fixed_rate_bidding_fee",
@@ -656,7 +642,7 @@ export class Marketplace {
   setFixedRateCommission(
     feeSchedule: MaybeHexString,
     commission: bigint,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       FEE_SCHEDULE,
       "set_fixed_rate_commission",
@@ -669,7 +655,7 @@ export class Marketplace {
     feeSchedule: MaybeHexString,
     commissionDenominator: bigint,
     commissionNumerator: bigint,
-  ): TransactionPayload {
+  ): InputTransactionData {
     return this.buildTransactionPayload(
       FEE_SCHEDULE,
       "set_percentage_rate_commission",
@@ -924,7 +910,7 @@ export class Marketplace {
   ) {
     return this.provider.view(
       {
-        function: `${this.code_location}::${module}::${func}`,
+        function: `${this.codeLocation}::${module}::${func}`,
         type_arguments: typeArguments,
         arguments: args,
       },
@@ -935,42 +921,15 @@ export class Marketplace {
   buildTransactionPayload(
     module: string,
     func: string,
-    type: string[],
+    types: string[],
     args: any[],
-  ): TransactionPayload {
+  ): InputTransactionData {
     return {
-      type: "entry_function_payload",
-      function: `${this.code_location}::${module}::${func}`,
-      type_arguments: type,
-      arguments: args,
+      data: {
+        function: `${this.codeLocation}::${module}::${func}`,
+        typeArguments: types,
+        functionArguments: args,
+      },
     };
-  }
-
-  /**
-   * Submits a transaction generated from one of the above functions
-   *
-   * @param sender
-   * @param payload
-   * @param extraArgs
-   */
-  async submitTransaction(
-    sender: AptosAccount,
-    payload: TransactionPayload,
-    extraArgs?: OptionalTransactionArgs,
-  ): Promise<string> {
-    const builder = new TransactionBuilderRemoteABI(this.provider, {
-      sender: sender.address(),
-      ...extraArgs,
-    });
-    const rawTxn = await builder.build(
-      payload.function,
-      payload.type_arguments,
-      payload.arguments,
-    );
-
-    const bcsTxn = AptosClient.generateBCSTransaction(sender, rawTxn);
-    const pendingTransaction =
-      await this.provider.submitSignedBCSTransaction(bcsTxn);
-    return pendingTransaction.hash;
   }
 }

@@ -1,7 +1,7 @@
-import { Network, Provider, Types } from "aptos";
+import { Network, Provider } from "aptos";
 import {
   AccountInfo,
-  TransactionOptions,
+  InputTransactionData,
 } from "@aptos-labs/wallet-adapter-core";
 import React from "react";
 /* eslint-disable @typescript-eslint/no-use-before-define */
@@ -19,10 +19,7 @@ export type TransactionContext = {
   account: AccountInfo | null;
   submitTransaction: SubmitTransaction;
 };
-export type SubmitTransaction = <T extends Types.TransactionPayload>(
-  transaction: T,
-  options?: TransactionOptions,
-) => Promise<any>;
+export type SubmitTransaction = (data: InputTransactionData) => Promise<any>;
 
 export const getProvider = (network: Network) => {
   if (network === Network.MAINNET) {
@@ -37,9 +34,9 @@ export const getProvider = (network: Network) => {
   throw new Error("Unknown network type");
 };
 
-export const runTransaction = async <T extends Types.TransactionPayload>(
+export const runTransaction = async (
   txnContext: TransactionContext,
-  payload: T,
+  payload: InputTransactionData,
 ) => {
   try {
     const provider = getProvider(txnContext.network);

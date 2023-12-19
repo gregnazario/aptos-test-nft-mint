@@ -3,6 +3,7 @@ import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
 import React, { useState } from "react";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { Network } from "aptos";
+import { MoveFunctionId } from "@aptos-labs/ts-sdk";
 import {
   ensureImageUri,
   onNumberChange,
@@ -31,10 +32,11 @@ function CollectionModifier(props: { expectedNetwork: Network }) {
     // Ensure you have a token and are connected
     if (!account && !collectionAddress) return [];
     const payload = {
-      type: "entry_function_payload",
-      function: "0x4::aptos_token::set_collection_uri",
-      type_arguments: ["0x4::aptos_token::AptosCollection"],
-      arguments: [collectionAddress, uri],
+      data: {
+        function: "0x4::aptos_token::set_collection_uri" as MoveFunctionId,
+        typeArguments: ["0x4::aptos_token::AptosCollection"],
+        functionArguments: [collectionAddress, uri],
+      },
     };
 
     return runTransaction(
@@ -125,10 +127,11 @@ function TokenModifier(props: { expectedNetwork: Network }) {
     // Ensure you have a token and are connected
     if (!account && !tokenAddress) return [];
     const payload = {
-      type: "entry_function_payload",
-      function: "0x4::aptos_token::set_uri",
-      type_arguments: ["0x4::aptos_token::AptosToken"],
-      arguments: [tokenAddress, uri],
+      data: {
+        function: "0x4::aptos_token::set_uri" as MoveFunctionId,
+        typeArguments: ["0x4::aptos_token::AptosToken"],
+        functionArguments: [tokenAddress, uri],
+      },
     };
 
     return runTransaction(
@@ -226,16 +229,17 @@ function Launchpad(props: { expectedNetwork: Network }) {
     // Ensure you're logged in
     if (!account || !collectionName || !network) return [];
     const payload = {
-      type: "entry_function_payload",
-      function: "0x3::token::create_collection_script",
-      type_arguments: [],
-      arguments: [
-        collectionName,
-        description,
-        uri, // collection URI
-        0, // Unlimited collection size
-        [true, true, true], // Everything allowed
-      ],
+      data: {
+        function: "0x3::token::create_collection_script" as MoveFunctionId,
+        typeArguments: [],
+        functionArguments: [
+          collectionName,
+          description,
+          uri, // collection URI
+          0, // Unlimited collection size
+          [true, true, true], // Everything allowed
+        ],
+      },
     };
 
     return runTransaction(
@@ -252,24 +256,25 @@ function Launchpad(props: { expectedNetwork: Network }) {
     // Ensure you're logged in
     if (!account || !collectionName || !tokenName) return [];
     const payload = {
-      type: "entry_function_payload",
-      function: "0x3::token::create_token_script",
-      type_arguments: [],
-      arguments: [
-        collectionName,
-        tokenName,
-        description,
-        1, // balance 1 (this is a NFT)
-        1, // maximum (this is a singular NFT)
-        uri,
-        account.address, // Royalty account
-        100, // royalty denominator
-        royaltyPercent, // royalty numerator
-        [true, true, true, true, true], // everything allowed mutable
-        [], // Property keys
-        [], // Property values
-        [], // Property types
-      ],
+      data: {
+        function: "0x3::token::create_token_script" as MoveFunctionId,
+        typeArguments: [],
+        functionArguments: [
+          collectionName,
+          tokenName,
+          description,
+          1, // balance 1 (this is a NFT)
+          1, // maximum (this is a singular NFT)
+          uri,
+          account.address, // Royalty account
+          100, // royalty denominator
+          royaltyPercent, // royalty numerator
+          [true, true, true, true, true], // everything allowed mutable
+          [], // Property keys
+          [], // Property values
+          [], // Property types
+        ],
+      },
     };
     return runTransaction(
       {
@@ -285,26 +290,27 @@ function Launchpad(props: { expectedNetwork: Network }) {
     // Ensure you're logged in
     if (!account || !collectionName) return [];
     const payload = {
-      type: "entry_function_payload",
-      function: "0x4::aptos_token::create_collection",
-      type_arguments: [],
-      arguments: [
-        description, // Description
-        10000, // Maximum supply
-        collectionName,
-        uri, // collection URI
-        true, // These are all mutable
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        royaltyPercent, // Royalty numerator
-        100, // Royalty denominator
-      ],
+      data: {
+        function: "0x4::aptos_token::create_collection" as MoveFunctionId,
+        typeArguments: [],
+        functionArguments: [
+          description, // Description
+          10000, // Maximum supply
+          collectionName,
+          uri, // collection URI
+          true, // These are all mutable
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          royaltyPercent, // Royalty numerator
+          100, // Royalty denominator
+        ],
+      },
     };
 
     return runTransaction(
@@ -321,10 +327,19 @@ function Launchpad(props: { expectedNetwork: Network }) {
     // Ensure you're logged in
     if (!account || !collectionName || !tokenName || !uri) return [];
     const payload = {
-      type: "entry_function_payload",
-      function: "0x4::aptos_token::mint",
-      type_arguments: [],
-      arguments: [collectionName, description, tokenName, uri, [], [], []],
+      data: {
+        function: "0x4::aptos_token::mint" as MoveFunctionId,
+        typeArguments: [],
+        functionArguments: [
+          collectionName,
+          description,
+          tokenName,
+          uri,
+          [],
+          [],
+          [],
+        ],
+      },
     };
     return runTransaction(
       {
