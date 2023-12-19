@@ -110,13 +110,14 @@ root.render(
 const getNetwork = (input: string | null) => {
   if (input?.toLowerCase() === Network.DEVNET.toLowerCase()) {
     return Network.DEVNET;
-  } else if (input?.toLowerCase() === Network.TESTNET.toLowerCase()) {
-    return Network.TESTNET;
-  } else if (input?.toLowerCase() === Network.MAINNET.toLowerCase()) {
-    return Network.MAINNET;
-  } else {
-    return undefined;
   }
+  if (input?.toLowerCase() === Network.TESTNET.toLowerCase()) {
+    return Network.TESTNET;
+  }
+  if (input?.toLowerCase() === Network.MAINNET.toLowerCase()) {
+    return Network.MAINNET;
+  }
+  return undefined;
 };
 
 function Selector(this: any) {
@@ -132,18 +133,18 @@ function Selector(this: any) {
       browserHistory.push(`?network=${Network.MAINNET}`);
     }
   });
-  // <Route path="/collection/:collection_id" element={<Wallet network={network}/>}/>
+  // <Route path="/collection/:collectionId" element={<Wallet network={network}/>}/>
   return (
     <>
       <BrowserRouter>
         <Routes>
           <Route index path="/" element={<AppPage network={network} />} />
           <Route
-            path="/wallet/:wallet_address"
+            path="/wallet/:walletAddress"
             element={<WalletPage network={network} />}
           />
           <Route
-            path="/token/:token_id"
+            path="/token/:tokenId"
             element={<TokenPage network={network} />}
           />
           <Route
@@ -201,17 +202,13 @@ function AppPage(props: { network: Network }) {
 }
 
 export function WalletPage(props: { network: Network }) {
-  // FIXME: Allow input of wallet on page, with setting url
-  const { wallet_address } = useParams();
+  const { walletAddress } = useParams();
   return (
     <Fragment key={"wallet_page"}>
       {props.network === Network.DEVNET && (
         <AptosWalletAdapterProvider plugins={DEVNET_WALLETS} autoConnect={true}>
           <NavBar expectedNetwork={props.network} current={WALLET} />
-          <Wallet
-            network={props.network}
-            wallet_address={wallet_address ?? ""}
-          />
+          <Wallet network={props.network} walletAddress={walletAddress ?? ""} />
         </AptosWalletAdapterProvider>
       )}
       {props.network === Network.TESTNET && (
@@ -220,10 +217,7 @@ export function WalletPage(props: { network: Network }) {
           autoConnect={true}
         >
           <NavBar expectedNetwork={props.network} current={WALLET} />
-          <Wallet
-            network={props.network}
-            wallet_address={wallet_address ?? ""}
-          />
+          <Wallet network={props.network} walletAddress={walletAddress ?? ""} />
         </AptosWalletAdapterProvider>
       )}
       {props.network === Network.MAINNET && (
@@ -232,10 +226,7 @@ export function WalletPage(props: { network: Network }) {
           autoConnect={true}
         >
           <NavBar expectedNetwork={props.network} current={WALLET} />
-          <Wallet
-            network={props.network}
-            wallet_address={wallet_address ?? ""}
-          />
+          <Wallet network={props.network} walletAddress={walletAddress ?? ""} />
         </AptosWalletAdapterProvider>
       )}
     </Fragment>
@@ -243,13 +234,13 @@ export function WalletPage(props: { network: Network }) {
 }
 
 export function TokenPage(props: { network: Network }) {
-  let { token_id } = useParams();
+  const { tokenId } = useParams();
   return (
     <Fragment key={"token_page"}>
       {props.network === Network.DEVNET && (
         <AptosWalletAdapterProvider plugins={DEVNET_WALLETS} autoConnect={true}>
           <NavBar expectedNetwork={props.network} current={WALLET} />
-          <TokenDetails network={props.network} token_id={token_id ?? ""} />
+          <TokenDetails network={props.network} tokenId={tokenId ?? ""} />
         </AptosWalletAdapterProvider>
       )}
       {props.network === Network.TESTNET && (
@@ -258,7 +249,7 @@ export function TokenPage(props: { network: Network }) {
           autoConnect={true}
         >
           <NavBar expectedNetwork={props.network} current={WALLET} />
-          <TokenDetails network={props.network} token_id={token_id ?? ""} />
+          <TokenDetails network={props.network} tokenId={tokenId ?? ""} />
         </AptosWalletAdapterProvider>
       )}
       {props.network === Network.MAINNET && (
@@ -267,7 +258,7 @@ export function TokenPage(props: { network: Network }) {
           autoConnect={true}
         >
           <NavBar expectedNetwork={props.network} current={WALLET} />
-          <TokenDetails network={props.network} token_id={token_id ?? ""} />
+          <TokenDetails network={props.network} tokenId={tokenId ?? ""} />
         </AptosWalletAdapterProvider>
       )}
     </Fragment>
@@ -391,18 +382,15 @@ export function NetworkChecker(props: {
   children?: React.ReactNode;
 }) {
   const walletContextState = useWallet();
-  const isSelectedNetwork = (): boolean => {
-    return (
-      walletContextState.network?.name?.toLowerCase() ===
-      props.expectedNetwork.toLowerCase()
-    );
-  };
+  const isSelectedNetwork = (): boolean =>
+    walletContextState.network?.name?.toLowerCase() ===
+    props.expectedNetwork.toLowerCase();
 
   return (
     <Fragment key={"network_checker"}>
       {!walletContextState.connected && (
         <EasyBorder offset={1}>
-          <Alert message={`Please connect your wallet`} type="info" />
+          <Alert message={"Please connect your wallet"} type="info" />
         </EasyBorder>
       )}
       {walletContextState.connected && !isSelectedNetwork() && (

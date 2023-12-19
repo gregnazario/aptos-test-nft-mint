@@ -30,8 +30,9 @@ import {
 import { EasyBorder } from "..";
 import { AUCTION, FIXED_PRICE, V1, V2 } from "../Marketplace";
 import { Transfer } from "../components/Transfer";
+/* eslint-disable no-console */
 
-export function TokenDetails(props: { network: Network; token_id: string }) {
+export function TokenDetails(props: { network: Network; tokenId: string }) {
   const [openListModal, setOpenListModal] = useState(false);
   const [openTransferModal, setOpenTransferModal] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -48,11 +49,11 @@ export function TokenDetails(props: { network: Network; token_id: string }) {
       account: walletState.account,
       submitTransaction: walletState.signAndSubmitTransaction,
     });
-  }, [props.network, props.token_id, walletState]);
+  }, [props.network, props.tokenId, walletState]);
 
   const fetchToken = async () => {
     const provider = getProvider(props.network);
-    const response = await provider.getTokenData(props.token_id);
+    const response = await provider.getTokenData(props.tokenId);
     try {
       const tokenData = response.current_token_datas_v2[0];
       const item: Token = {
@@ -138,7 +139,7 @@ export function TokenDetails(props: { network: Network; token_id: string }) {
                 {token?.standard}
               </Descriptions.Item>
               <Descriptions.Item label="TokenId">
-                {props.token_id}
+                {props.tokenId}
               </Descriptions.Item>
             </Descriptions>
           </Col>
