@@ -2,10 +2,12 @@ import React, {Fragment, useEffect} from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
-import reportWebVitals from './reportWebVitals';
 import {BloctoWallet} from "@blocto/aptos-wallet-adapter-plugin";
 import {FewchaWallet} from "fewcha-plugin-wallet-adapter";
 import {MartianWallet} from "@martianwallet/aptos-wallet-adapter";
+import {MSafeWalletAdapter} from "@msafe/aptos-wallet-adapter";
+import {ShadowWallet} from "@flipperplatform/wallet-adapter-plugin";
+import {OKXWallet} from "@okwallet/aptos-wallet-adapter";
 import {NightlyWallet} from "@nightlylabs/aptos-wallet-adapter-plugin";
 import {OpenBlockWallet} from "@openblockhq/aptos-wallet-adapter";
 import {PetraWallet} from "petra-plugin-wallet-adapter";
@@ -37,10 +39,12 @@ const DEVNET_WALLETS = [
     new PetraWallet(),
     new FewchaWallet(),
     new MartianWallet(),
+    new MSafeWalletAdapter(),
     new NightlyWallet(),
     new OpenBlockWallet(),
     new PontemWallet(),
     new RiseWallet(),
+    new ShadowWallet(),
     new TokenPocketWallet(),
     new TrustWallet(),
     new WelldoneWallet()];
@@ -53,10 +57,12 @@ const TESTNET_WALLETS = [
     }),
     new FewchaWallet(),
     new MartianWallet(),
+    new MSafeWalletAdapter(),
     new NightlyWallet(),
     new OpenBlockWallet(),
     new PontemWallet(),
     new RiseWallet(),
+    new ShadowWallet(),
     new TokenPocketWallet(),
     new TrustWallet(),
     new WelldoneWallet()];
@@ -69,10 +75,13 @@ const MAINNET_WALLETS = [
     }),
     new FewchaWallet(),
     new MartianWallet(),
+    new MSafeWalletAdapter(),
     new NightlyWallet(),
+    new OKXWallet(),
     new OpenBlockWallet(),
     new PontemWallet(),
     new RiseWallet(),
+    new ShadowWallet(),
     new TokenPocketWallet(),
     new TrustWallet(),
     new WelldoneWallet()];
@@ -341,8 +350,3 @@ const MARKETPLACE = "marketplace";
 const WALLET = "wallet";
 const CONTRACT = "contract";
 const SOURCE = "source";
-
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();
