@@ -1,4 +1,3 @@
-import { Network } from "aptos";
 import React, { Fragment, useEffect, useState } from "react";
 import {
   Alert,
@@ -19,9 +18,14 @@ import {
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { CheckboxChangeEvent } from "antd/es/checkbox";
 import type { Dayjs } from "dayjs";
-import type { RangeValue } from "rc-picker/lib/interface";
 import dayjs from "dayjs";
+import type { RangeValue } from "rc-picker/lib/interface";
 import { useNavigate } from "react-router";
+import {
+  MoveStructId,
+  Network,
+  TransactionResponseType,
+} from "@aptos-labs/ts-sdk";
 import { Marketplace as Helper } from "../MarketplaceHelper";
 // eslint-disable-next-line import/no-cycle
 import { EasyBorder } from "..";
@@ -150,12 +154,10 @@ export function Wallet(props: { network: Network; walletAddress: string }) {
       return;
     }
     try {
-      const numNfts = await getProvider(props.network).getAccountTokensCount(
-        address,
-      );
-      setTotalNfts(
-        numNfts.current_token_ownerships_v2_aggregate.aggregate?.count ?? 0,
-      );
+      const numNfts = await getProvider(props.network).getAccountTokensCount({
+        accountAddress: address,
+      });
+      setTotalNfts(numNfts ?? 0);
     } catch (error: any) {
       console.log(`Failed to load wallet ${error}`);
       setTotalNfts(10);
@@ -174,19 +176,19 @@ export function Wallet(props: { network: Network; walletAddress: string }) {
       return;
     }
     try {
-      const tokensQuery = await getProvider(props.network).getOwnedTokens(
-        address,
-        {
-          options: {
-            offset: page * limit,
-            limit,
-          },
+      const tokensQuery = await getProvider(
+        props.network,
+      ).getAccountOwnedTokens({
+        accountAddress: address,
+        options: {
+          offset: page * limit,
+          limit,
         },
-      );
+      });
 
       // TODO: Revisit this conversion and see if anything else needs to be cleaned up
       const tokens: Token[] = [];
-      for (const tokenData of tokensQuery.current_token_ownerships_v2) {
+      for (const tokenData of tokensQuery) {
         if (tokenData.token_standard === "v2") {
           const creatorAddress =
             tokenData.current_token_data?.current_collection?.creator_address ||
@@ -354,8 +356,8 @@ function WalletItem(props: {
     }
     runViewFunction(props.ctx, {
       function: "0x4::token::royalty",
-      type_arguments: ["0x4::aptos_token"],
-      arguments: [],
+      typeArguments: ["0x4::aptos_token::AptosToken"] as MoveStructId[],
+      functionArguments: [],
     });
     setOpenListModal(true);
   };
@@ -563,7 +565,7 @@ export function V1FixedListing(props: {
 
     try {
       const txn = await runTransaction(props.ctx, payload);
-      if (txn) {
+      if (txn?.type === TransactionResponseType.User) {
         let address = "unknown";
         for (const event of txn.events) {
           if (event.type === "0x1::object::TransferEvent") {
@@ -664,7 +666,7 @@ export function V1AuctionListing(props: {
 
     try {
       const txn = await runTransaction(props.ctx, payload);
-      if (txn) {
+      if (txn?.type === TransactionResponseType.User) {
         let address = "unknown";
         for (const event of txn.events) {
           if (event.type === "0x1::object::TransferEvent") {
@@ -855,7 +857,7 @@ export function V2AuctionListing(props: {
 
     try {
       const txn = await runTransaction(props.ctx, payload);
-      if (txn) {
+      if (txn?.type === TransactionResponseType.User) {
         let address = "unknown";
         for (const event of txn.events) {
           if (event.type === "0x1::object::TransferEvent") {
@@ -1020,7 +1022,7 @@ export function V2FixedListing(props: {
 
     try {
       const txn = await runTransaction(props.ctx, payload);
-      if (txn) {
+      if (txn?.type === TransactionResponseType.User) {
         let address = "unknown";
         for (const event of txn.events) {
           if (event.type === "0x1::object::TransferEvent") {

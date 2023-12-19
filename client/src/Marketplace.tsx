@@ -12,8 +12,8 @@ import {
 } from "antd";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
 import { useEffect, useState } from "react";
-import { Network } from "aptos";
 import { Link } from "react-router-dom";
+import { Network } from "@aptos-labs/ts-sdk";
 import {
   Listing,
   Marketplace as Helper,
@@ -101,12 +101,12 @@ function Marketplace(props: TransactionContext) {
         feeSchedule,
         BigInt(DEFAULT_PRICE),
       );
-      const name = await resolveToName(feeAddress.hex());
+      const name = await resolveToName(feeAddress.toString());
 
       setFeeScheduleDetails({
         name,
         error: null,
-        fee_address: feeAddress.hex(),
+        fee_address: feeAddress.toString(),
         listing_fee: listingFee.toString(),
         bidding_fee: biddingFee.toString(),
         commission: commission.toString(),

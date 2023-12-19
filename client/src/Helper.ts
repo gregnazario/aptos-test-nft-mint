@@ -1,18 +1,24 @@
-import { Network, Provider } from "aptos";
 import {
   AccountInfo,
   InputTransactionData,
 } from "@aptos-labs/wallet-adapter-core";
 import React from "react";
+import { Aptos, AptosConfig, Network, ViewRequest } from "@aptos-labs/ts-sdk";
 /* eslint-disable @typescript-eslint/no-use-before-define */
 
 /*
  * A helper central place for common code across components
  */
 
-export const DEVNET_PROVIDER = new Provider(Network.DEVNET);
-export const TESTNET_PROVIDER = new Provider(Network.TESTNET);
-export const MAINNET_PROVIDER = new Provider(Network.MAINNET);
+export const DEVNET_PROVIDER = new Aptos(
+  new AptosConfig({ network: Network.DEVNET }),
+);
+export const TESTNET_PROVIDER = new Aptos(
+  new AptosConfig({ network: Network.TESTNET }),
+);
+export const MAINNET_PROVIDER = new Aptos(
+  new AptosConfig({ network: Network.MAINNET }),
+);
 
 export type TransactionContext = {
   network: Network;
@@ -41,10 +47,10 @@ export const runTransaction = async (
   try {
     const provider = getProvider(txnContext.network);
     const response = await txnContext.submitTransaction(payload);
-    await provider.aptosClient.waitForTransaction(response.hash);
-    return (await provider.aptosClient.getTransactionByHash(
-      response.hash,
-    )) as any;
+    await provider.waitForTransaction({ transactionHash: response.hash });
+    return await provider.getTransactionByHash({
+      transactionHash: response.hash,
+    });
   } catch (error: any) {
     // eslint-disable-next-line no-console
     console.log(`Failed to wait for txn ${error}`);
@@ -53,26 +59,13 @@ export const runTransaction = async (
   return undefined;
 };
 
-// FIXME: All of these should be exported from the SDK
-declare type ViewRequest = {
-  function: string;
-  /**
-   * Type arguments of the function
-   */
-  type_arguments: Array<string>;
-  /**
-   * Arguments of the function
-   */
-  arguments: Array<any>;
-};
-
 export const runViewFunction = async (
   txnContext: TransactionContext,
   payload: ViewRequest,
 ) => {
   try {
     const provider = getProvider(txnContext.network);
-    return await provider.aptosClient.view(payload);
+    return await provider.view({ payload });
   } catch (error: any) {
     // eslint-disable-next-line no-console
     console.log(`Failed to wait for txn ${error}`);

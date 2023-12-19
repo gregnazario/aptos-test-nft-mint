@@ -1,6 +1,6 @@
 import { Layout } from "antd";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
-import { Network } from "aptos";
+import { Network } from "@aptos-labs/ts-sdk";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
 // eslint-disable-next-line import/no-cycle
 import Marketplace from "./Marketplace";

@@ -22,13 +22,13 @@ import {
   useWallet,
 } from "@aptos-labs/wallet-adapter-react";
 import { Alert, Col, Menu, MenuProps, Row } from "antd";
-import { Network } from "aptos";
 import { createBrowserHistory } from "history";
 import { Route, Routes, useNavigate, useParams } from "react-router";
 import { BrowserRouter } from "react-router-dom";
 import { WalletSelector } from "@aptos-labs/wallet-adapter-ant-design";
 import { Buffer as BufferPolyFill } from "buffer";
 import { IdentityConnectWallet } from "@identity-connect/wallet-adapter-plugin";
+import { Network } from "@aptos-labs/ts-sdk";
 // eslint-disable-next-line import/no-cycle
 import App from "./App";
 // eslint-disable-next-line import/no-cycle

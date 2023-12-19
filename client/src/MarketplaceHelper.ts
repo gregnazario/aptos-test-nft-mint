@@ -3,8 +3,15 @@
 
 /* eslint-disable max-len */
 
-import { HexString, MaybeHexString, Provider } from "aptos";
 import { InputTransactionData } from "@aptos-labs/wallet-adapter-core";
+import {
+  AccountAddress,
+  AccountAddressInput,
+  AnyNumber,
+  Aptos,
+  Hex,
+  MoveStructId,
+} from "@aptos-labs/ts-sdk";
 
 type ListingsQueryResponse = {
   nft_marketplace_v2_current_nft_marketplace_listings: Array<ListingIndexer>;
@@ -205,21 +212,21 @@ const LISTING: string = "listing";
  * also submit payloads directly with an AptosAccount.
  */
 export class Marketplace {
-  readonly provider: Provider;
+  readonly provider: Aptos;
 
-  readonly codeLocation: HexString;
+  readonly codeLocation: Hex;
 
-  constructor(provider: Provider, code_location: MaybeHexString) {
+  constructor(provider: Aptos, codeLocation: string) {
     this.provider = provider;
-    this.codeLocation = HexString.ensure(code_location);
+    this.codeLocation = Hex.fromHexInput(codeLocation);
   }
 
   // Coin listing operations
   initFixedPriceListing(
-    object: MaybeHexString,
-    feeSchedule: MaybeHexString,
-    startTime: bigint,
-    price: bigint,
+    object: AccountAddressInput,
+    feeSchedule: AccountAddressInput,
+    startTime: AnyNumber,
+    price: AnyNumber,
     coin: string = APTOS_COIN,
   ): InputTransactionData {
     return this.buildTransactionPayload(
@@ -227,23 +234,23 @@ export class Marketplace {
       "init_fixed_price",
       [coin],
       [
-        HexString.ensure(object).hex(),
-        HexString.ensure(feeSchedule).hex(),
-        startTime.toString(10),
-        price.toString(10),
+        AccountAddress.from(object).toString(),
+        AccountAddress.from(feeSchedule).toString(),
+        startTime.toString(),
+        price.toString(),
       ],
     );
   }
 
   initAuctionListing(
-    object: MaybeHexString,
-    feeSchedule: MaybeHexString,
-    startTime: bigint,
-    startingBid: bigint,
-    bidIncrement: bigint,
-    auctionEndTime: bigint,
-    minimumBidTimeBeforeEnd: bigint,
-    buyItNowPrice?: bigint,
+    object: AccountAddressInput,
+    feeSchedule: AccountAddressInput,
+    startTime: AnyNumber,
+    startingBid: AnyNumber,
+    bidIncrement: AnyNumber,
+    auctionEndTime: AnyNumber,
+    minimumBidTimeBeforeEnd: AnyNumber,
+    buyItNowPrice?: AnyNumber,
     coin: string = APTOS_COIN,
   ): InputTransactionData {
     return this.buildTransactionPayload(
@@ -251,26 +258,26 @@ export class Marketplace {
       "init_auction",
       [coin],
       [
-        HexString.ensure(object).hex(),
-        HexString.ensure(feeSchedule).hex(),
-        startTime.toString(10),
-        startingBid.toString(10),
-        bidIncrement.toString(10),
-        auctionEndTime.toString(10),
-        minimumBidTimeBeforeEnd.toString(10),
-        buyItNowPrice?.toString(10),
+        AccountAddress.from(object),
+        AccountAddress.from(feeSchedule),
+        startTime,
+        startingBid,
+        bidIncrement,
+        auctionEndTime,
+        minimumBidTimeBeforeEnd,
+        buyItNowPrice,
       ],
     );
   }
 
   initFixedPriceListingForTokenv1(
-    tokenCreator: MaybeHexString,
+    tokenCreator: AccountAddressInput,
     tokenCollection: string,
     tokenName: string,
-    tokenPropertyVersion: bigint,
-    feeSchedule: MaybeHexString,
-    startTime: bigint,
-    price: bigint,
+    tokenPropertyVersion: AnyNumber,
+    feeSchedule: AccountAddressInput,
+    startTime: AnyNumber,
+    price: AnyNumber,
     coin: string = APTOS_COIN,
   ): InputTransactionData {
     return this.buildTransactionPayload(
@@ -278,29 +285,29 @@ export class Marketplace {
       "init_fixed_price_for_tokenv1",
       [coin],
       [
-        HexString.ensure(tokenCreator).hex(),
+        AccountAddress.from(tokenCreator).toString(),
         tokenCollection,
         tokenName,
-        tokenPropertyVersion.toString(10),
-        HexString.ensure(feeSchedule).hex(),
-        startTime.toString(10),
-        price.toString(10),
+        tokenPropertyVersion.toString(),
+        AccountAddress.from(feeSchedule).toString(),
+        startTime.toString(),
+        price.toString(),
       ],
     );
   }
 
   initAuctionListingForTokenv1(
-    tokenCreator: MaybeHexString,
+    tokenCreator: AccountAddressInput,
     tokenCollection: string,
     tokenName: string,
-    tokenPropertyVersion: bigint,
-    feeSchedule: MaybeHexString,
-    startTime: bigint,
-    startingBid: bigint,
-    bidIncrement: bigint,
-    auctionEndTime: bigint,
-    minimumBidTimeBeforeEnd: bigint,
-    buyItNowPrice?: bigint,
+    tokenPropertyVersion: AnyNumber,
+    feeSchedule: AccountAddressInput,
+    startTime: AnyNumber,
+    startingBid: AnyNumber,
+    bidIncrement: AnyNumber,
+    auctionEndTime: AnyNumber,
+    minimumBidTimeBeforeEnd: AnyNumber,
+    buyItNowPrice?: AnyNumber,
     coin: string = APTOS_COIN,
   ): InputTransactionData {
     return this.buildTransactionPayload(
@@ -308,102 +315,102 @@ export class Marketplace {
       "init_auction_for_tokenv1",
       [coin],
       [
-        HexString.ensure(tokenCreator).hex(),
+        AccountAddress.from(tokenCreator).toString(),
         tokenCollection,
         tokenName,
-        tokenPropertyVersion.toString(10),
-        HexString.ensure(feeSchedule).hex(),
-        startTime.toString(10),
-        startingBid.toString(10),
-        bidIncrement.toString(10),
-        auctionEndTime.toString(10),
-        minimumBidTimeBeforeEnd.toString(10),
-        buyItNowPrice?.toString(10),
+        tokenPropertyVersion.toString(),
+        AccountAddress.from(feeSchedule).toString(),
+        startTime.toString(),
+        startingBid.toString(),
+        bidIncrement.toString(),
+        auctionEndTime.toString(),
+        minimumBidTimeBeforeEnd.toString(),
+        buyItNowPrice?.toString(),
       ],
     );
   }
 
   purchaseListing(
-    listing: MaybeHexString,
+    listing: AccountAddressInput,
     coin: string = APTOS_COIN,
   ): InputTransactionData {
     return this.buildTransactionPayload(
       COIN_LISTING,
       "purchase",
       [coin],
-      [HexString.ensure(listing).hex()],
+      [AccountAddress.from(listing).toString()],
     );
   }
 
   endFixedPriceListing(
-    listing: MaybeHexString,
+    listing: AccountAddressInput,
     coin: string = APTOS_COIN,
   ): InputTransactionData {
     return this.buildTransactionPayload(
       COIN_LISTING,
       "end_fixed_price",
       [coin],
-      [HexString.ensure(listing).hex()],
+      [AccountAddress.from(listing).toString()],
     );
   }
 
   bidAuctionListing(
-    listing: MaybeHexString,
-    bid_amount: bigint,
+    listing: AccountAddressInput,
+    bid_amount: AnyNumber,
     coin: string = APTOS_COIN,
   ): InputTransactionData {
     return this.buildTransactionPayload(
       COIN_LISTING,
       "bid",
       [coin],
-      [HexString.ensure(listing).hex(), bid_amount.toString(10)],
+      [AccountAddress.from(listing).toString(), bid_amount.toString()],
     );
   }
 
   buyNowAuctionListing(
-    listing: MaybeHexString,
-    bid_amount: bigint,
+    listing: AccountAddressInput,
+    bid_amount: AnyNumber,
     coin: string = APTOS_COIN,
   ): InputTransactionData {
     return this.buildTransactionPayload(
       COIN_LISTING,
       "bid",
       [coin],
-      [HexString.ensure(listing).hex(), bid_amount.toString(10)],
+      [AccountAddress.from(listing).toString(), bid_amount.toString()],
     );
   }
 
   completeAuctionListing(
-    listing: MaybeHexString,
+    listing: AccountAddressInput,
     coin: string = APTOS_COIN,
   ): InputTransactionData {
     return this.buildTransactionPayload(
       COIN_LISTING,
       "complete_auction",
       [coin],
-      [HexString.ensure(listing).hex()],
+      [AccountAddress.from(listing).toString()],
     );
   }
 
   // Listing operations
-  extract_tokenv1(object: MaybeHexString): InputTransactionData {
+  extract_tokenv1(object: AccountAddressInput): InputTransactionData {
     return this.buildTransactionPayload(
       LISTING,
       "extract_tokenv1",
       [],
-      [HexString.ensure(object).hex()],
+      [AccountAddress.from(object).toString()],
     );
   }
 
   // Collection offer operations
 
   initCollectionOfferForTokenv1(
-    tokenCreator: MaybeHexString,
+    tokenCreator: AccountAddressInput,
     tokenCollection: string,
-    feeSchedule: MaybeHexString,
-    price: bigint,
-    amount: bigint,
-    expiration_time: bigint,
+    feeSchedule: AccountAddressInput,
+    price: AnyNumber,
+    amount: AnyNumber,
+    expiration_time: AnyNumber,
     coin: string = APTOS_COIN,
   ): InputTransactionData {
     return this.buildTransactionPayload(
@@ -411,9 +418,9 @@ export class Marketplace {
       "init_for_tokenv1_entry",
       [coin],
       [
-        HexString.ensure(tokenCreator).hex(),
+        AccountAddress.from(tokenCreator).toString(),
         tokenCollection,
-        HexString.ensure(feeSchedule).hex(),
+        AccountAddress.from(feeSchedule).toString(),
         price.toString(),
         amount.toString(),
         expiration_time.toString(),
@@ -422,11 +429,11 @@ export class Marketplace {
   }
 
   initCollectionOfferForTokenv2(
-    collection: MaybeHexString,
-    feeSchedule: MaybeHexString,
-    price: bigint,
-    amount: bigint,
-    expiration_time: bigint,
+    collection: AccountAddressInput,
+    feeSchedule: AccountAddressInput,
+    price: AnyNumber,
+    amount: AnyNumber,
+    expiration_time: AnyNumber,
     coin: string = APTOS_COIN,
   ): InputTransactionData {
     return this.buildTransactionPayload(
@@ -434,8 +441,8 @@ export class Marketplace {
       "init_for_tokenv2_entry",
       [coin],
       [
-        HexString.ensure(collection).hex(),
-        HexString.ensure(feeSchedule).hex(),
+        AccountAddress.from(collection).toString(),
+        AccountAddress.from(feeSchedule).toString(),
         price.toString(),
         amount.toString(),
         expiration_time.toString(),
@@ -444,21 +451,21 @@ export class Marketplace {
   }
 
   cancelCollectionOffer(
-    collectionOffer: MaybeHexString,
+    collectionOffer: AccountAddressInput,
     coin: string = APTOS_COIN,
   ): InputTransactionData {
     return this.buildTransactionPayload(
       COLLECTION_OFFER,
       "cancel",
       [coin],
-      [HexString.ensure(collectionOffer).hex()],
+      [AccountAddress.from(collectionOffer).toString()],
     );
   }
 
   fillCollectionOfferForTokenv1(
-    collectionOffer: MaybeHexString,
+    collectionOffer: AccountAddressInput,
     tokenName: string,
-    propertyVersion: bigint,
+    propertyVersion: AnyNumber,
     coin: string = APTOS_COIN,
   ): InputTransactionData {
     return this.buildTransactionPayload(
@@ -466,32 +473,35 @@ export class Marketplace {
       "sell_tokenv1_entry",
       [coin],
       [
-        HexString.ensure(collectionOffer).hex(),
+        AccountAddress.from(collectionOffer).toString(),
         tokenName,
-        propertyVersion.toString(10),
+        propertyVersion.toString(),
       ],
     );
   }
 
   fillCollectionOfferForTokenv2(
-    collectionOffer: MaybeHexString,
-    token: MaybeHexString,
+    collectionOffer: AccountAddressInput,
+    token: AccountAddressInput,
     coin: string = APTOS_COIN,
   ): InputTransactionData {
     return this.buildTransactionPayload(
       COLLECTION_OFFER,
       "sell_tokenv2",
       [coin],
-      [HexString.ensure(collectionOffer).hex(), HexString.ensure(token).hex()],
+      [
+        AccountAddress.from(collectionOffer).toString(),
+        AccountAddress.from(token).toString(),
+      ],
     );
   }
 
   initTokenOfferForTokenv1(
-    tokenCreator: MaybeHexString,
+    tokenCreator: AccountAddressInput,
     token: string,
-    feeSchedule: MaybeHexString,
-    price: bigint,
-    expiration_time: bigint,
+    feeSchedule: AccountAddressInput,
+    price: AnyNumber,
+    expiration_time: AnyNumber,
     coin: string = APTOS_COIN,
   ): InputTransactionData {
     return this.buildTransactionPayload(
@@ -499,9 +509,9 @@ export class Marketplace {
       "init_for_tokenv1_entry",
       [coin],
       [
-        HexString.ensure(tokenCreator).hex(),
+        AccountAddress.from(tokenCreator).toString(),
         token,
-        HexString.ensure(feeSchedule).hex(),
+        AccountAddress.from(feeSchedule).toString(),
         price.toString(),
         expiration_time.toString(),
       ],
@@ -509,10 +519,10 @@ export class Marketplace {
   }
 
   initTokenOfferForTokenv2(
-    token: MaybeHexString,
-    feeSchedule: MaybeHexString,
-    price: bigint,
-    expiration_time: bigint,
+    token: AccountAddressInput,
+    feeSchedule: AccountAddressInput,
+    price: AnyNumber,
+    expiration_time: AnyNumber,
     coin: string = APTOS_COIN,
   ): InputTransactionData {
     return this.buildTransactionPayload(
@@ -520,8 +530,8 @@ export class Marketplace {
       "init_for_tokenv2_entry",
       [coin],
       [
-        HexString.ensure(token).hex(),
-        HexString.ensure(feeSchedule).hex(),
+        AccountAddress.from(token).toString(),
+        AccountAddress.from(feeSchedule).toString(),
         price.toString(),
         expiration_time.toString(),
       ],
@@ -529,21 +539,21 @@ export class Marketplace {
   }
 
   cancelTokenOffer(
-    tokenOffer: MaybeHexString,
+    tokenOffer: AccountAddressInput,
     coin: string = APTOS_COIN,
   ): InputTransactionData {
     return this.buildTransactionPayload(
       TOKEN_OFFER,
       "cancel",
       [coin],
-      [HexString.ensure(tokenOffer).hex()],
+      [AccountAddress.from(tokenOffer).toString()],
     );
   }
 
   fillTokenOfferForTokenv1(
-    tokenOffer: MaybeHexString,
+    tokenOffer: AccountAddressInput,
     tokenName: string,
-    propertyVersion: bigint,
+    propertyVersion: AnyNumber,
     coin: string = APTOS_COIN,
   ): InputTransactionData {
     return this.buildTransactionPayload(
@@ -551,119 +561,125 @@ export class Marketplace {
       "sell_tokenv1_entry",
       [coin],
       [
-        HexString.ensure(tokenOffer).hex(),
+        AccountAddress.from(tokenOffer).toString(),
         tokenName,
-        propertyVersion.toString(10),
+        propertyVersion.toString(),
       ],
     );
   }
 
   fillTokenOfferForTokenv2(
-    tokenOffer: MaybeHexString,
-    token: MaybeHexString,
+    tokenOffer: AccountAddressInput,
+    token: AccountAddressInput,
     coin: string = APTOS_COIN,
   ): InputTransactionData {
     return this.buildTransactionPayload(
       TOKEN_OFFER,
       "sell_tokenv2",
       [coin],
-      [HexString.ensure(tokenOffer).hex(), HexString.ensure(token).hex()],
+      [
+        AccountAddress.from(tokenOffer).toString(),
+        AccountAddress.from(token).toString(),
+      ],
     );
   }
 
   // Fee schedule operations
 
   initFeeSchedule(
-    feeAddress: MaybeHexString,
-    biddingFee: bigint,
-    listingFee: bigint,
-    commissionDenominator: bigint,
-    commissionNumerator: bigint,
+    feeAddress: AccountAddressInput,
+    biddingFee: AnyNumber,
+    listingFee: AnyNumber,
+    commissionDenominator: AnyNumber,
+    commissionNumerator: AnyNumber,
   ): InputTransactionData {
     return this.buildTransactionPayload(
       FEE_SCHEDULE,
       "init_entry",
       [],
       [
-        HexString.ensure(feeAddress).hex(),
-        biddingFee.toString(10),
-        listingFee.toString(10),
-        commissionDenominator.toString(10),
-        commissionNumerator.toString(10),
+        AccountAddress.from(feeAddress).toString(),
+        biddingFee.toString(),
+        listingFee.toString(),
+        commissionDenominator.toString(),
+        commissionNumerator.toString(),
       ],
     );
   }
 
-  initEmptyFeeSchedule(feeAddress: MaybeHexString): InputTransactionData {
+  initEmptyFeeSchedule(feeAddress: AccountAddressInput): InputTransactionData {
     return this.buildTransactionPayload(
       FEE_SCHEDULE,
       "empty",
       [],
-      [HexString.ensure(feeAddress).hex()],
+      [AccountAddress.from(feeAddress).toString()],
     );
   }
 
   setFeeAddress(
-    feeSchedule: MaybeHexString,
-    feeAddress: MaybeHexString,
+    feeSchedule: AccountAddressInput,
+    feeAddress: AccountAddressInput,
   ): InputTransactionData {
     return this.buildTransactionPayload(
       FEE_SCHEDULE,
       "set_fee_address",
       [],
-      [HexString.ensure(feeSchedule).hex(), HexString.ensure(feeAddress).hex()],
+      [
+        AccountAddress.from(feeSchedule).toString(),
+        AccountAddress.from(feeAddress).toString(),
+      ],
     );
   }
 
   setFixedRateListingFee(
-    feeSchedule: MaybeHexString,
-    fee: bigint,
+    feeSchedule: AccountAddressInput,
+    fee: AnyNumber,
   ): InputTransactionData {
     return this.buildTransactionPayload(
       FEE_SCHEDULE,
       "set_fixed_rate_listing_fee",
       [],
-      [HexString.ensure(feeSchedule).hex(), fee.toString(10)],
+      [AccountAddress.from(feeSchedule).toString(), fee.toString()],
     );
   }
 
   setFixedRateBiddingFee(
-    feeSchedule: MaybeHexString,
-    fee: bigint,
+    feeSchedule: AccountAddressInput,
+    fee: AnyNumber,
   ): InputTransactionData {
     return this.buildTransactionPayload(
       FEE_SCHEDULE,
       "set_fixed_rate_bidding_fee",
       [],
-      [HexString.ensure(feeSchedule).hex(), fee.toString(10)],
+      [AccountAddress.from(feeSchedule).toString(), fee.toString()],
     );
   }
 
   setFixedRateCommission(
-    feeSchedule: MaybeHexString,
-    commission: bigint,
+    feeSchedule: AccountAddressInput,
+    commission: AnyNumber,
   ): InputTransactionData {
     return this.buildTransactionPayload(
       FEE_SCHEDULE,
       "set_fixed_rate_commission",
       [],
-      [HexString.ensure(feeSchedule).hex(), commission.toString(10)],
+      [AccountAddress.from(feeSchedule).toString(), commission.toString()],
     );
   }
 
   setPercentageRateCommission(
-    feeSchedule: MaybeHexString,
-    commissionDenominator: bigint,
-    commissionNumerator: bigint,
+    feeSchedule: AccountAddressInput,
+    commissionDenominator: AnyNumber,
+    commissionNumerator: AnyNumber,
   ): InputTransactionData {
     return this.buildTransactionPayload(
       FEE_SCHEDULE,
       "set_percentage_rate_commission",
       [],
       [
-        HexString.ensure(feeSchedule).hex(),
-        commissionDenominator.toString(10),
-        commissionNumerator.toString(10),
+        AccountAddress.from(feeSchedule).toString(),
+        commissionDenominator.toString(),
+        commissionNumerator.toString(),
       ],
     );
   }
@@ -674,52 +690,52 @@ export class Marketplace {
   // TODO: Listing view functions
 
   async feeAddress(
-    feeSchedule: MaybeHexString,
+    feeSchedule: AccountAddressInput,
     ledgerVersion?: bigint,
-  ): Promise<HexString> {
+  ): Promise<AccountAddress> {
     const outputs = await this.view(
       FEE_SCHEDULE,
       "fee_address",
       [],
-      [HexString.ensure(feeSchedule).hex()],
+      [AccountAddress.from(feeSchedule).toStringLong()],
       ledgerVersion,
     );
 
-    return HexString.ensure(outputs[0].toString());
+    return AccountAddress.from(outputs[0]!.toString());
   }
 
   async listingFee(
-    feeSchedule: MaybeHexString,
+    feeSchedule: AccountAddressInput,
     ledgerVersion?: bigint,
   ): Promise<bigint> {
     const outputs = await this.view(
       FEE_SCHEDULE,
       "listing_fee",
       [],
-      [HexString.ensure(feeSchedule).hex(), "0"],
+      [AccountAddress.from(feeSchedule).toStringLong(), "0"],
       ledgerVersion,
     );
 
-    return BigInt(outputs[0].toString());
+    return BigInt(outputs[0]!.toString());
   }
 
   async biddingFee(
-    feeSchedule: MaybeHexString,
+    feeSchedule: AccountAddressInput,
     ledgerVersion?: bigint,
   ): Promise<bigint> {
     const outputs = await this.view(
       FEE_SCHEDULE,
       "bidding_fee",
       [],
-      [HexString.ensure(feeSchedule).hex(), "0"],
+      [AccountAddress.from(feeSchedule).toStringLong(), "0"],
       ledgerVersion,
     );
 
-    return BigInt(outputs[0].toString());
+    return BigInt(outputs[0]!.toString());
   }
 
   async commission(
-    feeSchedule: MaybeHexString,
+    feeSchedule: AccountAddressInput,
     price: bigint,
     ledgerVersion?: bigint,
   ): Promise<bigint> {
@@ -727,11 +743,11 @@ export class Marketplace {
       FEE_SCHEDULE,
       "commission",
       [],
-      [HexString.ensure(feeSchedule).hex(), price.toString(10).toString()],
+      [AccountAddress.from(feeSchedule).toStringLong(), price.toString(10)],
       ledgerVersion,
     );
 
-    return BigInt(outputs[0].toString());
+    return BigInt(outputs[0]!.toString());
   }
 
   // Indexer queries
@@ -741,11 +757,11 @@ export class Marketplace {
    * @param feeScheduleId
    */
   async getListings(
-    contractAddress: MaybeHexString,
+    contractAddress: AccountAddressInput,
     feeScheduleId: String,
   ): Promise<ListingsResponse> {
     const variables = {
-      contract_address: HexString.ensure(contractAddress).hex(),
+      contract_address: AccountAddress.from(contractAddress).toStringLong(),
       fee_schedule_id: feeScheduleId,
     };
     const indexerResponse = await this.queryIndexer<ListingsQueryResponse>(
@@ -780,12 +796,12 @@ export class Marketplace {
   }
 
   async getAuctions(
-    contractAddress: MaybeHexString,
+    contractAddress: AccountAddressInput,
     feeScheduleId: String,
   ): Promise<AuctionsResponse> {
     // TODO: Fix query
     const variables = {
-      contract_address: HexString.ensure(contractAddress).hex(),
+      contract_address: AccountAddress.from(contractAddress).toStringLong(),
       fee_schedule_id: feeScheduleId,
     };
     const result = await this.queryIndexer<AuctionsQueryResponse>(
@@ -796,14 +812,14 @@ export class Marketplace {
   }
 
   async getTokenOffers(
-    contractAddress: MaybeHexString,
+    contractAddress: AccountAddressInput,
     marketplace: String,
-    tokenAddress: MaybeHexString,
+    tokenAddress: AccountAddressInput,
   ): Promise<Array<TokenOffer>> {
     const variables = {
-      contract_address: HexString.ensure(contractAddress).hex(),
+      contract_address: AccountAddress.from(contractAddress).toStringLong(),
       marketplace,
-      token_id: HexString.ensure(tokenAddress).hex(),
+      token_id: AccountAddress.from(tokenAddress).toStringLong(),
     };
 
     const response: TokenOfferIndexerResponse = await this.queryIndexer(
@@ -832,9 +848,9 @@ export class Marketplace {
   }
 
   async getCollectionOffers(
-    contractAddress: MaybeHexString,
+    contractAddress: AccountAddressInput,
     marketplace: String,
-    collectionAddress: MaybeHexString,
+    collectionAddress: AccountAddressInput,
     isDeleted: boolean,
   ): Promise<
     {
@@ -869,9 +885,9 @@ export class Marketplace {
               }
             }`;
     const variables = {
-      contract_address: HexString.ensure(contractAddress).hex(),
+      contract_address: AccountAddress.from(contractAddress).toStringLong(),
       marketplace,
-      collection_id: HexString.ensure(collectionAddress).hex(),
+      collection_id: AccountAddress.from(collectionAddress).toStringLong(),
       is_deleted: isDeleted,
     };
 
@@ -893,12 +909,14 @@ export class Marketplace {
 
   // Helpers
 
-  async queryIndexer<T>(query: string, variables?: {}): Promise<T> {
+  async queryIndexer<T extends {}>(query: string, variables?: {}): Promise<T> {
     const graphqlQuery = {
       query,
       variables,
     };
-    return this.provider.queryIndexer(graphqlQuery);
+    return this.provider.queryIndexer<T>({
+      query: graphqlQuery,
+    });
   }
 
   async view(
@@ -908,14 +926,16 @@ export class Marketplace {
     args: any[],
     ledgerVersion?: bigint,
   ) {
-    return this.provider.view(
-      {
+    return this.provider.view({
+      payload: {
         function: `${this.codeLocation}::${module}::${func}`,
-        type_arguments: typeArguments,
-        arguments: args,
+        typeArguments: typeArguments as MoveStructId[],
+        functionArguments: args,
       },
-      ledgerVersion?.toString(10),
-    );
+      options: {
+        ledgerVersion,
+      },
+    });
   }
 
   buildTransactionPayload(

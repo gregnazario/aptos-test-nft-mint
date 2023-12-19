@@ -1,4 +1,3 @@
-import { Network } from "aptos";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
@@ -13,6 +12,7 @@ import {
   Select,
 } from "antd";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
+import { Network } from "@aptos-labs/ts-sdk";
 // eslint-disable-next-line import/no-cycle
 import {
   Token,
@@ -53,9 +53,10 @@ export function TokenDetails(props: { network: Network; tokenId: string }) {
 
   const fetchToken = async () => {
     const provider = getProvider(props.network);
-    const response = await provider.getTokenData(props.tokenId);
+    const tokenData = await provider.getDigitalAssetData({
+      digitalAssetAddress: props.tokenId,
+    });
     try {
-      const tokenData = response.current_token_datas_v2[0];
       const item: Token = {
         type: "NFT",
         name: tokenData.token_name,
@@ -79,8 +80,8 @@ export function TokenDetails(props: { network: Network; tokenId: string }) {
     }
     runViewFunction(ctx, {
       function: "0x4::token::royalty",
-      type_arguments: ["0x4::aptos_token"],
-      arguments: [],
+      typeArguments: ["0x4::aptos_token::AptosToken"],
+      functionArguments: [],
     });
     setOpenListModal(true);
   };

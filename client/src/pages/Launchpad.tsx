@@ -2,8 +2,7 @@ import { Button, Col, Image, Input, Layout, Row, Select } from "antd";
 import "@aptos-labs/wallet-adapter-ant-design/dist/index.css";
 import React, { useState } from "react";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
-import { Network } from "aptos";
-import { MoveFunctionId } from "@aptos-labs/ts-sdk";
+import { MoveFunctionId, Network } from "@aptos-labs/ts-sdk";
 import {
   ensureImageUri,
   onNumberChange,
