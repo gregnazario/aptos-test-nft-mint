@@ -52,7 +52,7 @@
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build",
     "lint": "eslint \"**/*.ts\"",
-    "fmt": "prettier './**/*.ts' './**/*.tsx' './**/*.js'  './**/*.jsx'"
+    "fmt": "prettier './**/*.(js|ts|jsx|tsx|json|md|css|html)' --write"
   },
   "eslintConfig": {
     "extends": [
