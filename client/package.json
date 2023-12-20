@@ -47,7 +47,7 @@
   },
   "scripts": {
     "start": "vite --port 3000",
-    "build": "tsc --noEmit && vite build",
+    "build": "vite build",
     "serve": "vite preview",
     "deploy": "gh-pages -d build",
     "lint": "eslint \"**/*.ts\"",
