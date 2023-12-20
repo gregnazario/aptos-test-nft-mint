@@ -1,7 +1,6 @@
 import React, { Fragment, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
-import { BloctoWallet } from "@blocto/aptos-wallet-adapter-plugin";
 import { FewchaWallet } from "fewcha-plugin-wallet-adapter";
 import { MartianWallet } from "@martianwallet/aptos-wallet-adapter";
 import { MSafeWalletAdapter } from "@msafe/aptos-wallet-adapter";
@@ -62,10 +61,6 @@ const DEVNET_WALLETS = [
 const TESTNET_WALLETS = [
   new IdentityConnectWallet(icDappId, { networkName: NetworkName.Testnet }),
   new PetraWallet(),
-  new BloctoWallet({
-    network: NetworkName.Testnet,
-    bloctoAppId: "6d85f56e-5f2e-46cd-b5f2-5cf9695b4d46",
-  }),
   new FewchaWallet(),
   new MartianWallet(),
   new MSafeWalletAdapter(),
@@ -81,10 +76,6 @@ const TESTNET_WALLETS = [
 const MAINNET_WALLETS = [
   new IdentityConnectWallet(icDappId, { networkName: NetworkName.Mainnet }),
   new PetraWallet(),
-  new BloctoWallet({
-    network: NetworkName.Mainnet,
-    bloctoAppId: "6d85f56e-5f2e-46cd-b5f2-5cf9695b4d46",
-  }),
   new FewchaWallet(),
   new MartianWallet(),
   new MSafeWalletAdapter(),
