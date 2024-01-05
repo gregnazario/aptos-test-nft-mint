@@ -463,6 +463,7 @@ function Launchpad(props: { expectedNetwork: Network }) {
               />
             </Col>
           </Row>
+          {(type === TOKEN && standard === V1 || type === COLLECTION && standard == V2) && (
           <Row align="middle">
             <Col span={2}>
               <p>Royalty Percent:</p>
@@ -475,10 +476,11 @@ function Launchpad(props: { expectedNetwork: Network }) {
                 style={{ width: "calc(100% - 60px)" }}
                 placeholder="Royalty Percent (whole percent)"
                 size="large"
-                defaultValue={0}
+                defaultValue={royaltyPercent}
               />
             </Col>
           </Row>
+          )}
           {type === COLLECTION && standard === V1 && (
             <Row align="middle">
               <Col offset={2} span={2}>
