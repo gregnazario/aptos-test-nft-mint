@@ -463,23 +463,24 @@ function Launchpad(props: { expectedNetwork: Network }) {
               />
             </Col>
           </Row>
-          {(type === TOKEN && standard === V1 || type === COLLECTION && standard == V2) && (
-          <Row align="middle">
-            <Col span={2}>
-              <p>Royalty Percent:</p>
-            </Col>
-            <Col flex={"auto"}>
-              <Input
-                onChange={(event) => {
-                  onNumberChange(event, setRoyaltyPercent);
-                }}
-                style={{ width: "calc(100% - 60px)" }}
-                placeholder="Royalty Percent (whole percent)"
-                size="large"
-                defaultValue={royaltyPercent}
-              />
-            </Col>
-          </Row>
+          {((type === TOKEN && standard === V1) ||
+            (type === COLLECTION && standard == V2)) && (
+            <Row align="middle">
+              <Col span={2}>
+                <p>Royalty Percent:</p>
+              </Col>
+              <Col flex={"auto"}>
+                <Input
+                  onChange={(event) => {
+                    onNumberChange(event, setRoyaltyPercent);
+                  }}
+                  style={{ width: "calc(100% - 60px)" }}
+                  placeholder="Royalty Percent (whole percent)"
+                  size="large"
+                  defaultValue={royaltyPercent}
+                />
+              </Col>
+            </Row>
           )}
           {type === COLLECTION && standard === V1 && (
             <Row align="middle">
