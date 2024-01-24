@@ -8,38 +8,25 @@ import {
   Divider,
   Image,
   Input,
-  Layout,
   Modal,
   Pagination,
   Row,
   Select,
   Tooltip,
 } from "antd";
+import { Image as TokenImage } from "../components/Image";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { CheckboxChangeEvent } from "antd/es/checkbox";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import type { RangeValue } from "rc-picker/lib/interface";
-import { useNavigate } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import {
   MoveStructId,
   Network,
   TransactionResponseType,
 } from "@aptos-labs/ts-sdk";
 import { Marketplace as Helper } from "../MarketplaceHelper";
-// eslint-disable-next-line import/no-cycle
-import { EasyBorder } from "..";
-// eslint-disable-next-line import/no-cycle
-import {
-  AUCTION,
-  DEFAULT_PRICE,
-  defaultFeeSchedule,
-  FIXED_PRICE,
-  MODULE_ADDRESS,
-  toApt,
-  V1,
-  V2,
-} from "../Marketplace";
 // eslint-disable-next-line import/no-cycle
 import { Transfer } from "../components/Transfer";
 import {
@@ -51,6 +38,10 @@ import {
   runViewFunction,
   TransactionContext,
 } from "../Helper";
+import { EasyBorder } from "../components/EasyBorder";
+import { MODULE_ADDRESS, DEFAULT_PRICE, AUCTION, FIXED_PRICE, V1, V2, defaultFeeSchedule, toApt } from "../utils/constants";
+
+;
 /* eslint-disable @typescript-eslint/no-use-before-define */
 /* eslint-disable no-console */
 
@@ -59,6 +50,7 @@ export type Token = {
   collection: string;
   collection_id: string;
   name: string;
+  description: string;
   data_id: string;
   uri: string;
   type: string;
@@ -120,10 +112,11 @@ export const resolveToAddress = async (maybe_name: string): Promise<string> => {
   return maybe_name;
 };
 
-export function Wallet(props: { network: Network; walletAddress: string }) {
+export function Wallet(props: { network: Network; }) {
+  const { walletAddress } = useParams();
   const [totalNfts, setTotalNfts] = useState<number>(10);
-  const [address, setAddress] = useState<string>(props.walletAddress ?? "");
-  const [name, setName] = useState<string>(props.walletAddress ?? "");
+  const [address, setAddress] = useState<string>(walletAddress ?? "");
+  const [name, setName] = useState<string>(walletAddress ?? "");
   const [wallet, setWallet] = useState<{
     error: string | undefined;
     tokens: Token[];
@@ -132,14 +125,14 @@ export function Wallet(props: { network: Network; walletAddress: string }) {
 
   useEffect(() => {
     fetchWalletFirstTime();
-  }, [props.network, props.walletAddress]);
+  }, [props.network, walletAddress]);
 
   const fetchWalletFirstTime = async () => {
-    if (!props.walletAddress) {
+    if (!walletAddress) {
       return;
     }
     // eslint-disable-next-line @typescript-eslint/no-shadow
-    const address = await resolveToAddress(props.walletAddress);
+    const address = await resolveToAddress(walletAddress);
     // eslint-disable-next-line @typescript-eslint/no-shadow
     const name = await resolveToName(address);
     setAddress(address);
@@ -277,8 +270,7 @@ export function Wallet(props: { network: Network; walletAddress: string }) {
 
   // TODO: Prettyfy and add current listings
   return (
-    <EasyBorder offset={1}>
-      <Layout>
+    <EasyBorder offset={0}>
         <Row align="middle">
           <Col offset={1}>
             <h2>Wallet: {name}</h2>
@@ -287,46 +279,48 @@ export function Wallet(props: { network: Network; walletAddress: string }) {
         <Divider />
         {!wallet?.error && (
           <Fragment key={"wallet_nfts"}>
-            <Row align={"middle"}>
-              <Col span={1} />
-              {wallet?.tokens.map((item) => {
-                if (
-                  !walletContextState.connected ||
-                  !walletContextState.account
-                ) {
-                  return (
-                    <WalletItem address={address} ctx={null} item={item} />
-                  );
-                }
-                return (
-                  <WalletItem
-                    address={address}
-                    ctx={{
-                      account: walletContextState.account,
-                      network: props.network,
-                      submitTransaction:
-                        walletContextState.signAndSubmitTransaction,
+                <Row align={"middle"}>
+                  <Col span={1} />
+                  {wallet?.tokens.map((item) => {
+                    if (
+                      !walletContextState.connected ||
+                      !walletContextState.account
+                    ) {
+                      return (
+                        <WalletItem key={item.data_id} address={address} ctx={null} item={item} />
+                      );
+                    }
+                    return (
+                      <WalletItem
+                        key={item.data_id} 
+                        address={address}
+                        ctx={{
+                          account: walletContextState.account,
+                          network: props.network,
+                          submitTransaction:
+                            walletContextState.signAndSubmitTransaction,
+                        }}
+                        item={item}
+                      />
+                    );
+                  })}
+                  <Col span={1} />
+                </Row>
+              
+              <Row align="middle">
+                <Col offset={2} flex={"auto"}>
+                  <Pagination
+                    onChange={(page, limit) => {
+                      fetchWallet(address, name, page - 1, limit);
                     }}
-                    item={item}
+                    defaultCurrent={1}
+                    total={totalNfts}
                   />
-                );
-              })}
-              <Col span={1} />
-            </Row>
-            <Row align="middle">
-              <Col offset={2} flex={"auto"}>
-                <Pagination
-                  onChange={(page, limit) => {
-                    fetchWallet(address, name, page - 1, limit);
-                  }}
-                  defaultCurrent={1}
-                  total={totalNfts}
-                />
-              </Col>
-              <Col span={2} />
-            </Row>
-          </Fragment>
-        )}
+                </Col>
+                <Col span={2} />
+              </Row>
+            </Fragment>
+          )}
         {wallet?.error && (
           <Row align="middle">
             <Col offset={2} flex={"auto"}>
@@ -334,7 +328,6 @@ export function Wallet(props: { network: Network; walletAddress: string }) {
             </Col>
           </Row>
         )}
-      </Layout>
     </EasyBorder>
   );
 }
@@ -375,6 +368,7 @@ function WalletItem(props: {
     setConfirmLoading(false);
     setOpenListModal(false);
     setOpenTransferModal(false);
+    window.location.reload();
   };
 
   const handleCancel = () => {
@@ -386,147 +380,150 @@ function WalletItem(props: {
   const navigate = useNavigate();
 
   return (
-    <Col span={2.5}>
-      <Row align={"middle"}>
-        {props.item.standard.toLowerCase() === "v1" && (
-          <Tooltip
-            placement="right"
-            title={`${props.item.collection} : ${props.item.name}\n
-                     ${props.item.standard} ${props.item.type}\n
-                                        Data id: ${props.item.data_id}\n
-                                        Creator: ${props.item.creator_address}\n
-                                        Property Version: ${props.item.property_version}
-                                        `}
-          >
-            <Image
-              onClick={() => navigate(`/token/${props.item.data_id}`)}
-              width={150}
-              src={props.item.uri}
-              alt={props.item.name}
-              /* eslint-disable-next-line max-len */
-              fallback="data:image/png;base64,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"
-            />
-          </Tooltip>
-        )}
-        {props.item.standard.toLowerCase() === "v2" && (
-          <Tooltip
-            placement="right"
-            title={`${props.item.collection} : ${props.item.name}\n
-                     Standard: ${props.item.standard}\n
-                     Type: ${props.item.type}\n
-                     Data id: ${props.item.data_id}\n
-                     Creator: ${props.item.creator_address}\n
-                     Property Version: ${props.item.property_version}`}
-          >
-            <Image
-              onClick={() => navigate(`/token/${props.item.data_id}`)}
-              width={150}
-              src={props.item.uri}
-              alt={props.item.name}
-              /* eslint-disable-next-line max-len */
-              fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3PTWBSGcbGzM6GCKqlIBRV0dHRJFarQ0eUT8LH4BnRU0NHR0UEFVdIlFRV7TzRksomPY8uykTk/zewQfKw/9znv4yvJynLv4uLiV2dBoDiBf4qP3/ARuCRABEFAoBEgghggQAQZQKAnYEaQBAQaASKIAQJEkAEEegJmBElAoBEgghggQAQZQKAnYEaQBAQaASKIAQJEkAEEegJmBElAoBEgghggQAQZQKAnYEaQBAQaASKIAQJEkAEEegJmBElAoBEgghggQAQZQKAnYEaQBAQaASKIAQJEkAEEegJmBElAoBEgghggQAQZQKAnYEaQBAQaASKIAQJEkAEEegJmBElAoBEgghggQAQZQKAnYEaQBAQaASKIAQJEkAEEegJmBElAoBEgghggQAQZQKAnYEaQBAQaASKIAQJEkAEEegJmBElAoBEgghggQAQZQKAnYEaQBAQaASKIAQJEkAEEegJmBElAoBEgghggQAQZQKAnYEaQBAQaASKIAQJEkAEEegJmBElAoBEgghggQAQZQKAnYEaQBAQaASKIAQJEkAEEegJmBElAoBEgghggQAQZQKAnYEaQBAQaASKIAQJEkAEEegJmBElAoBEgghggQAQZQKAnYEaQBAQaASKIAQJEkAEEegJmBElAoBEgghgg0Aj8i0JO4OzsrPv69Wv+hi2qPHr0qNvf39+iI97soRIh4f3z58/u7du3SXX7Xt7Z2enevHmzfQe+oSN2apSAPj09TSrb+XKI/f379+08+A0cNRE2ANkupk+ACNPvkSPcAAEibACyXUyfABGm3yNHuAECRNgAZLuYPgEirKlHu7u7XdyytGwHAd8jjNyng4OD7vnz51dbPT8/7z58+NB9+/bt6jU/TI+AGWHEnrx48eJ/EsSmHzx40L18+fLyzxF3ZVMjEyDCiEDjMYZZS5wiPXnyZFbJaxMhQIQRGzHvWR7XCyOCXsOmiDAi1HmPMMQjDpbpEiDCiL358eNHurW/5SnWdIBbXiDCiA38/Pnzrce2YyZ4//59F3ePLNMl4PbpiL2J0L979+7yDtHDhw8vtzzvdGnEXdvUigSIsCLAWavHp/+qM0BcXMd/q25n1vF57TYBp0a3mUzilePj4+7k5KSLb6gt6ydAhPUzXnoPR0dHl79WGTNCfBnn1uvSCJdegQhLI1vvCk+fPu2ePXt2tZOYEV6/fn31dz+shwAR1sP1cqvLntbEN9MxA9xcYjsxS1jWR4AIa2Ibzx0tc44fYX/16lV6NDFLXH+YL32jwiACRBiEbf5KcXoTIsQSpzXx4N28Ja4BQoK7rgXiydbHjx/P25TaQAJEGAguWy0+2Q8PD6/Ki4R8EVl+bzBOnZY95fq9rj9zAkTI2SxdidBHqG9+skdw43borCXO/ZcJdraPWdv22uIEiLA4q7nvvCug8WTqzQveOH26fodo7g6uFe/a17W3+nFBAkRYENRdb1vkkz1CH9cPsVy/jrhr27PqMYvENYNlHAIesRiBYwRy0V+8iXP8+/fvX11Mr7L7ECueb/r48eMqm7FuI2BGWDEG8cm+7G3NEOfmdcTQw4h9/55lhm7DekRYKQPZF2ArbXTAyu4kDYB2YxUzwg0gi/41ztHnfQG26HbGel/crVrm7tNY+/1btkOEAZ2M05r4FB7r9GbAIdxaZYrHdOsgJ/wCEQY0J74TmOKnbxxT9n3FgGGWWsVdowHtjt9Nnvf7yQM2aZU/TIAIAxrw6dOnAWtZZcoEnBpNuTuObWMEiLAx1HY0ZQJEmHJ3HNvGCBBhY6jtaMoEiJB0Z29vL6ls58vxPcO8/zfrdo5qvKO+d3Fx8Wu8zf1dW4p/cPzLly/dtv9Ts/EbcvGAHhHyfBIhZ6NSiIBTo0LNNtScABFyNiqFCBChULMNNSdAhJyNSiECRCjUbEPNCRAhZ6NSiAARCjXbUHMCRMjZqBQiQIRCzTbUnAARcjYqhQgQoVCzDTUnQIScjUohAkQo1GxDzQkQIWejUogAEQo121BzAkTI2agUIkCEQs021JwAEXI2KoUIEKFQsw01J0CEnI1KIQJEKNRsQ80JECFno1KIABEKNdtQcwJEyNmoFCJAhELNNtScABFyNiqFCBChULMNNSdAhJyNSiECRCjUbEPNCRAhZ6NSiAARCjXbUHMCRMjZqBQiQIRCzTbUnAARcjYqhQgQoVCzDTUnQIScjUohAkQo1GxDzQkQIWejUogAEQo121BzAkTI2agUIkCEQs021JwAEXI2KoUIEKFQsw01J0CEnI1KIQJEKNRsQ80JECFno1KIABEKNdtQcwJEyNmoFCJAhELNNtScABFyNiqFCBChULMNNSdAhJyNSiECRCjUbEPNCRAhZ6NSiAARCjXbUHMCRMjZqBQiQIRCzTbUnAARcjYqhQgQoVCzDTUnQIScjUohAkQo1GxDzQkQIWejUogAEQo121BzAkTI2agUIkCEQs021JwAEXI2KoUIEKFQsw01J0CEnI1KIQJEKNRsQ80JECFno1KIABEKNdtQcwJEyNmoFCJAhELNNtScABFyNiqFCBChULMNNSdAhJyNSiEC/wGgKKC4YMA4TAAAAABJRU5ErkJggg=="
-            />
-          </Tooltip>
-        )}
-      </Row>
-      {props.ctx?.account?.address === props.address && (
+    <div className="container">
+      <Col span={2.5}>
         <Row align={"middle"}>
-          <Col flex={"auto"}>
-            <Button
-              onClick={showListModal}
-              type="primary"
-              style={{ height: "40px", backgroundColor: "#3f67ff" }}
+          {props.item.standard.toLowerCase() === "v1" && (
+            <Tooltip
+              placement="right"
+              title={`${props.item.collection} : ${props.item.name}\n
+                      ${props.item.standard} ${props.item.type}\n
+                                          Data id: ${props.item.data_id}\n
+                                          Creator: ${props.item.creator_address}\n
+                                          Property Version: ${props.item.property_version}
+                                          `}
             >
-              List
-            </Button>
-            <Modal
-              title={`List ${props.item.collection} : ${props.item.name}`}
-              open={openListModal}
-              onOk={handleListOk}
-              confirmLoading={confirmLoading}
-              onCancel={handleCancel}
-              width={750}
-            >
-              <Select
-                defaultValue={listingType}
-                style={{ width: 120 }}
-                onChange={setListingType}
-                options={[
-                  { value: FIXED_PRICE, label: FIXED_PRICE },
-                  { value: AUCTION, label: AUCTION },
-                ]}
+              <Image
+                onClick={() => navigate(`/token/${props.item.data_id}`)}
+                width={150}
+                src={props.item.uri}
+                alt={props.item.name}
+                /* eslint-disable-next-line max-len */
+                fallback="data:image/png;base64,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"
               />
-              {props.item.standard === V1 && listingType === FIXED_PRICE && (
-                <V1FixedListing
-                  item={props.item}
-                  ctx={props.ctx}
-                  submit={submitFixed}
-                  submitCallback={finishedCallback}
-                />
-              )}
-              {props.item.standard === V1 && listingType === AUCTION && (
-                <V1AuctionListing
-                  item={props.item}
-                  ctx={props.ctx}
-                  submit={submitFixed}
-                  submitCallback={finishedCallback}
-                />
-              )}
-              {props.item.standard === V2 && listingType === FIXED_PRICE && (
-                <V2FixedListing
-                  item={props.item}
-                  ctx={props.ctx}
-                  submit={submitFixed}
-                  submitCallback={finishedCallback}
-                />
-              )}
-              {props.item.standard === V2 && listingType === AUCTION && (
-                <V2AuctionListing
-                  item={props.item}
-                  ctx={props.ctx}
-                  submit={submitFixed}
-                  submitCallback={finishedCallback}
-                />
-              )}
-            </Modal>
-          </Col>
-          <Col flex={"auto"}>
-            <Button
-              onClick={showTransferModal}
-              type="primary"
-              style={{ height: "40px", backgroundColor: "#3f67ff" }}
-              disabled={props.item.standard === V1}
+            </Tooltip>
+          )}
+          {props.item.standard.toLowerCase() === "v2" && (
+            <Tooltip
+              placement="right"
+              title={`${props.item.collection} : ${props.item.name}\n
+                      Standard: ${props.item.standard}\n
+                      Type: ${props.item.type}\n
+                      Data id: ${props.item.data_id}\n
+                      Creator: ${props.item.creator_address}\n
+                      Property Version: ${props.item.property_version}`}
             >
-              Transfer
-            </Button>
-            <Modal
-              title={`Transfer ${props.item.collection} : ${props.item.name}`}
-              open={openTransferModal}
-              onOk={handleListOk}
-              confirmLoading={confirmLoading}
-              onCancel={handleCancel}
-            >
-              {props.item.standard === V1 && (
-                <Alert
-                  type={"warning"}
-                  message={
-                    "Transfer currently not supported for V1, please use your wallet to transfer"
-                  }
-                />
-              )}
-              {props.item.standard === V2 && (
-                <Transfer
-                  ctx={props.ctx}
-                  objectAddress={props.item.data_id}
-                  submit={submitFixed}
-                  submitCallback={finishedCallback}
-                />
-              )}
-            </Modal>
-          </Col>
+              <TokenImage
+                onClick={() => navigate(`/token/${props.item.data_id}`)}
+                width={150}
+                uri={props.item.uri}
+                tokenId={props.item.data_id}
+                alt={props.item.name}
+                /* eslint-disable-next-line max-len */
+                fallback="data:image/png;base64,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"
+              />
+            </Tooltip>
+          )}
         </Row>
-      )}
-    </Col>
+        {props.ctx?.account?.address === props.address && (
+          <Row align={"middle"}>
+            <Col flex={"auto"}>
+              <Button
+                onClick={showListModal}
+                type="primary"
+                style={{ height: "40px", backgroundColor: "#3f67ff" }}
+              >
+                List
+              </Button>
+              <Modal
+                title={`List ${props.item.collection} : ${props.item.name}`}
+                open={openListModal}
+                onOk={handleListOk}
+                confirmLoading={confirmLoading}
+                onCancel={handleCancel}
+                width={750}
+              >
+                <Select
+                  defaultValue={listingType}
+                  style={{ width: 120 }}
+                  onChange={setListingType}
+                  options={[
+                    { value: FIXED_PRICE, label: FIXED_PRICE },
+                    { value: AUCTION, label: AUCTION },
+                  ]}
+                />
+                {props.item.standard === V1 && listingType === FIXED_PRICE && (
+                  <V1FixedListing
+                    item={props.item}
+                    ctx={props.ctx}
+                    submit={submitFixed}
+                    submitCallback={finishedCallback}
+                  />
+                )}
+                {props.item.standard === V1 && listingType === AUCTION && (
+                  <V1AuctionListing
+                    item={props.item}
+                    ctx={props.ctx}
+                    submit={submitFixed}
+                    submitCallback={finishedCallback}
+                  />
+                )}
+                {props.item.standard === V2 && listingType === FIXED_PRICE && (
+                  <V2FixedListing
+                    item={props.item}
+                    ctx={props.ctx}
+                    submit={submitFixed}
+                    submitCallback={finishedCallback}
+                  />
+                )}
+                {props.item.standard === V2 && listingType === AUCTION && (
+                  <V2AuctionListing
+                    item={props.item}
+                    ctx={props.ctx}
+                    submit={submitFixed}
+                    submitCallback={finishedCallback}
+                  />
+                )}
+              </Modal>
+            </Col>
+            <Col flex={"auto"}>
+              <Button
+                onClick={showTransferModal}
+                type="primary"
+                style={{ height: "40px", backgroundColor: "#3f67ff" }}
+                disabled={props.item.standard === V1}
+              >
+                Transfer
+              </Button>
+              <Modal
+                title={`Transfer ${props.item.collection} : ${props.item.name}`}
+                open={openTransferModal}
+                onOk={handleListOk}
+                confirmLoading={confirmLoading}
+                onCancel={handleCancel}
+              >
+                {props.item.standard === V1 && (
+                  <Alert
+                    type={"warning"}
+                    message={
+                      "Transfer currently not supported for V1, please use your wallet to transfer"
+                    }
+                  />
+                )}
+                {props.item.standard === V2 && (
+                  <Transfer
+                    ctx={props.ctx}
+                    objectAddress={props.item.data_id}
+                    submit={submitFixed}
+                    submitCallback={finishedCallback}
+                  />
+                )}
+              </Modal>
+            </Col>
+          </Row>
+        )}
+      </Col>
+    </div>
   );
 }
 

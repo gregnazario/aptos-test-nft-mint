@@ -12,6 +12,18 @@ import {
   Hex,
   MoveStructId,
 } from "@aptos-labs/ts-sdk";
+import { 
+  AUCTIONS_QUERY,
+  COLLECTION_OFFERS_QUERY,
+  FETCH_COLLECTIONS_DATA_IDS,
+  FETCH_COLLECTIONS_HOME_PAGE,
+  FETCH_COLLECTIONS_FLOOR,
+  FETCH_COLLECTION_DATA,
+  FETCH_LISTING_DETAILS,
+  LISTINGS_ALL_QUERY,
+  TOKEN_OFFERS_QUERY,
+  FETCH_COLLECTIONS_DATA_ITEM
+} from "./Queries";
 
 type ListingsQueryResponse = {
   nft_marketplace_v2_current_nft_marketplace_listings: Array<ListingIndexer>;
@@ -24,6 +36,7 @@ export type ListingIndexer = {
       creator_address: string;
       collection_name: string;
     };
+    token_data_id: string;
     token_name: string;
     token_uri: string;
     largest_property_version_v1: number;
@@ -55,32 +68,6 @@ export type Listing = {
   token_standard: string;
 };
 
-export const LISTINGS_ALL_QUERY = `query GetFixedPriceListings($contract_address:String!, $fee_schedule_id: String!) {
-        nft_marketplace_v2_current_nft_marketplace_listings(where: {
-          contract_address: { _eq: $contract_address }
-          fee_schedule_id: { _eq: $fee_schedule_id }
-          is_deleted: { _eq: false }
-        }) {
-          collection_id
-          contract_address
-          current_token_data {
-            current_collection {
-              creator_address
-              collection_name
-            }
-            token_name
-            token_uri
-            largest_property_version_v1
-          }
-          price
-          listing_id
-          token_amount
-          token_standard
-          seller
-          fee_schedule_id
-        }
-    }`;
-
 type AuctionsQueryResponse = {
   nft_marketplace_v2_current_nft_marketplace_auctions: AuctionsResponse;
 };
@@ -107,35 +94,6 @@ export type AuctionsResponse = Array<{
   contract_address: string;
   fee_schedule_id: string;
 }>;
-export const AUCTIONS_QUERY = `query GetAuctions($contract_address: String!, $fee_schedule_id: String!) {
-      nft_marketplace_v2_current_nft_marketplace_auctions(where: {
-        contract_address: { _eq: $contract_address }
-        fee_schedule_id: { _eq: $fee_schedule_id }
-        is_deleted: { _eq: false }
-      }) {
-      buy_it_now_price
-      starting_bid_price
-      current_bid_price
-      current_bidder
-      expiration_time
-      listing_id
-      current_token_data {
-        current_collection {
-        creator_address
-          collection_name
-        }
-        collection_id
-        token_data_id
-        token_name
-        largest_property_version_v1
-        token_uri
-      }
-      token_amount
-      seller
-      contract_address
-      fee_schedule_id
-    }
- }`;
 
 type TokenOfferIndexerResponse = {
   nft_marketplace_v2_current_nft_marketplace_token_offers: Array<TokenOfferIndexer>;
@@ -173,32 +131,6 @@ export type TokenOffer = {
   token_standard: string;
   fee_schedule_id: string;
 };
-
-export const TOKEN_OFFERS_QUERY = `query GetTokenV2Offers($contract_address:String!, $marketplace: String!, $token_id: String!) {
-            nft_marketplace_v2_current_nft_marketplace_token_offers(where: {
-                contract_address: { _eq: $contract_address }
-                marketplace: { _eq: $marketplace }
-                is_deleted: { _eq: false}
-                token_data_id: { _eq: $token_id }
-                token_standard: { _eq: "v2" }
-            }) {
-                buyer
-                current_token_data {
-                    current_collection {
-                      collection_name
-                    }
-                    collection_id
-                    token_data_id
-                    token_name
-                }
-                expiration_time
-                offer_id
-                price
-                token_amount
-                token_standard
-                fee_schedule_id
-            }
-        }`;
 
 const APTOS_COIN: string = "0x1::aptos_coin::AptosCoin";
 const COIN_LISTING: string = "coin_listing";
@@ -777,7 +709,7 @@ export class Marketplace {
         collection_id: listing.collection_id,
         collection_name:
           listing.current_token_data.current_collection.collection_name,
-        token_data_id: listing.token_data_id,
+        token_data_id: listing.current_token_data.token_data_id,
         token_name: listing.current_token_data.token_name,
         property_version:
           listing.current_token_data.largest_property_version_v1 || 0,
@@ -794,6 +726,73 @@ export class Marketplace {
 
     return listings;
   }
+
+  async getTopCollections(): Promise<any> {
+    // const variables = {
+    //   offset: 0,
+    //   limit: 25,
+    // };
+    const result = await this.queryIndexer<AuctionsQueryResponse>(
+      FETCH_COLLECTIONS_DATA_IDS,
+      // variables,
+    );
+    const collectionIds = result.nft_marketplace_v2_current_nft_marketplace_listings;
+    const collections = await Promise.all(collectionIds.map((collectionId: string) => this.queryIndexer(
+      FETCH_COLLECTIONS_DATA_ITEM,
+      collectionId,
+    )))
+    const formattedCollections = collections.map((collection: any) => ({
+      ...collection.current_collections_v2_by_pk,
+      num_listings: collection.nft_marketplace_v2_current_nft_marketplace_listings_aggregate.aggregate.count,
+      price: collection.nft_marketplace_v2_current_nft_marketplace_listings_aggregate.aggregate.sum.price
+    })).sort((collectionA, collectionB) => collectionB.price - collectionA.price);
+    return formattedCollections;
+  }
+
+  async getCollectionData(collection_id: string): Promise<any> {
+    const variables = {
+      collection_id: AccountAddress.from(collection_id).toStringLong(),
+    };
+    const result = await this.queryIndexer<ListingsQueryResponse>(
+      FETCH_COLLECTION_DATA,
+      variables,
+    );
+    return result.current_collections_v2[0];
+  }
+
+  async getCollectionsFloor(collection_id: string): Promise<any> {
+    const variables = {
+      collection_id: AccountAddress.from(collection_id).toStringLong(),
+    };
+    const result = await this.queryIndexer<ListingsQueryResponse>(
+      FETCH_COLLECTIONS_FLOOR,
+      variables,
+    );
+    return result;
+  }
+
+  async getListingData(listing_id: string): Promise<any> {
+    const variables = {
+      listing_id: AccountAddress.from(listing_id).toStringLong(),
+    };
+    const result = await this.queryIndexer<ListingsQueryResponse>(
+      FETCH_LISTING_DETAILS,
+      variables,
+    );
+    return result.nft_marketplace_v2_current_nft_marketplace_listings[0];
+  }
+
+  async getListingActivity(listing_id: string): Promise<any> {
+    const variables = {
+      collection_id: AccountAddress.from(listing_id).toStringLong(),
+    };
+    const result = await this.queryIndexer<ListingsQueryResponse>(
+      FETCH_COLLECTIONS_FLOOR,
+      variables,
+    );
+    return result;
+  }
+  
 
   async getAuctions(
     contractAddress: AccountAddressInput,
@@ -864,26 +863,6 @@ export class Marketplace {
       is_deleted: boolean;
     }[]
   > {
-    const query = `query GetCollectionOffers($contract_address:String!, $marketplace: String!, $collection_id: String!, $is_deleted: Boolean!) {
-              nft_marketplace_v2_current_nft_marketplace_collection_offers(where: {
-                  contract_address: { _eq: $contract_address }
-                  marketplace: { _eq: $marketplace }
-                  is_deleted: { _eq: $is_deleted }
-                  collection_id: { _eq: $collection_id }
-              }) {
-                buyer
-                collection_id
-                collection_offer_id
-                current_collection {
-                  collection_name
-                  uri
-                }
-                expiration_time
-                is_deleted
-                item_price
-                remaining_token_amount
-              }
-            }`;
     const variables = {
       contract_address: AccountAddress.from(contractAddress).toStringLong(),
       marketplace,
@@ -903,7 +882,7 @@ export class Marketplace {
           remaining_token_amount: number;
           is_deleted: boolean;
         }[];
-      }>(query, variables)
+      }>(COLLECTION_OFFERS_QUERY, variables)
     ).nft_marketplace_v2_current_nft_marketplace_collection_offers;
   }
 

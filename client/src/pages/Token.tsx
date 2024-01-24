@@ -6,13 +6,14 @@ import {
   Descriptions,
   Divider,
   Image,
-  Layout,
   Modal,
   Row,
   Select,
 } from "antd";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { Network } from "@aptos-labs/ts-sdk";
+// eslint-disable-next-line import/no-cycle
+import { useParams } from "react-router";
 // eslint-disable-next-line import/no-cycle
 import {
   Token,
@@ -27,12 +28,13 @@ import {
   runViewFunction,
   TransactionContext,
 } from "../Helper";
-import { EasyBorder } from "..";
-import { AUCTION, FIXED_PRICE, V1, V2 } from "../Marketplace";
 import { Transfer } from "../components/Transfer";
+import { EasyBorder } from "../components/EasyBorder";
+import { FIXED_PRICE, AUCTION, V1, V2 } from "../utils/constants";
 /* eslint-disable no-console */
 
-export function TokenDetails(props: { network: Network; tokenId: string }) {
+export function TokenDetails(props: { network: Network }) {
+  const { tokenId } = useParams();
   const [openListModal, setOpenListModal] = useState(false);
   const [openTransferModal, setOpenTransferModal] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -49,17 +51,19 @@ export function TokenDetails(props: { network: Network; tokenId: string }) {
       account: walletState.account,
       submitTransaction: walletState.signAndSubmitTransaction,
     });
-  }, [props.network, props.tokenId, walletState]);
+  }, [props.network, tokenId, walletState]);
 
   const fetchToken = async () => {
     const provider = getProvider(props.network);
     const tokenData = await provider.getDigitalAssetData({
-      digitalAssetAddress: props.tokenId,
+      digitalAssetAddress: tokenId || "",
     });
     try {
       const item: Token = {
         type: "NFT",
         name: tokenData.token_name,
+        description: tokenData.description,
+        token_properties: tokenData.token_properties,
         collection: tokenData.current_collection?.collection_name || "",
         standard: tokenData.token_standard.toUpperCase(),
         data_id: tokenData.token_data_id,
@@ -111,7 +115,6 @@ export function TokenDetails(props: { network: Network; tokenId: string }) {
   // TODO: Prettyfy and add current listings
   return (
     <EasyBorder offset={1}>
-      <Layout>
         <Row align="middle">
           <Col offset={1}>
             <h2>
@@ -123,6 +126,7 @@ export function TokenDetails(props: { network: Network; tokenId: string }) {
         <Row align="middle">
           <Col offset={1} flex={"auto"}>
             <Image
+              className="container"
               width={500}
               src={token?.uri}
               alt={token?.name}
@@ -133,14 +137,15 @@ export function TokenDetails(props: { network: Network; tokenId: string }) {
           <Col offset={1} flex={"auto"}>
             <Descriptions
               title="Token Info"
-              bordered
-              column={{ xxl: 6, xl: 5, lg: 4, md: 3, sm: 2, xs: 1 }}
             >
+              <Descriptions.Item span={4}>
+                {token?.description}
+              </Descriptions.Item>
               <Descriptions.Item label="Standard">
                 {token?.standard}
               </Descriptions.Item>
               <Descriptions.Item label="TokenId">
-                {props.tokenId}
+                {tokenId}
               </Descriptions.Item>
             </Descriptions>
           </Col>
@@ -240,7 +245,6 @@ export function TokenDetails(props: { network: Network; tokenId: string }) {
             </Modal>
           </Col>
         </Row>
-      </Layout>
     </EasyBorder>
   );
 }
