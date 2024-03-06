@@ -37,6 +37,8 @@ import { EasyBorder } from ".";
 
 export const MODULE_ADDRESS =
   "0x6de37368e31dff4580b211295198159ee6f98b42ffa93c5683bb955ca1be67e0";
+export const RANDOMNET_FEE_SCHEDULE =
+  "0xa18a3a0da4779319c1afb70f4c19003faaae5abc6e17b884487ad5ace8f749c8";
 export const DEVNET_FEE_SCHEDULE =
   "0x96e6143a72d9cb40872972c241112ecb43cc0ca8aca376a940a182d620ccef1c";
 export const TESTNET_FEE_SCHEDULE =
@@ -62,6 +64,9 @@ export const defaultFeeSchedule = (network: Network) => {
   }
   if (network === Network.DEVNET) {
     return DEVNET_FEE_SCHEDULE;
+  }
+  if (network === Network.RANDOMNET) {
+    return RANDOMNET_FEE_SCHEDULE;
   }
 
   throw new Error("Unsupported network");

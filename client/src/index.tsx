@@ -42,7 +42,7 @@ const icDappId = "9cfd33d8-80a9-4e0b-9c7b-195e8a241aa0";
 window.Buffer = BufferPolyFill;
 
 /* eslint-disable @typescript-eslint/no-use-before-define */
-
+const RANDOMNET_WALLETS = [new PetraWallet()];
 const DEVNET_WALLETS = [
   new IdentityConnectWallet(icDappId, { networkName: NetworkName.Devnet }),
   new PetraWallet(),
@@ -99,6 +99,9 @@ root.render(
 );
 
 const getNetwork = (input: string | null) => {
+  if (input?.toLowerCase() === Network.RANDOMNET.toLowerCase()) {
+    return Network.RANDOMNET;
+  }
   if (input?.toLowerCase() === Network.DEVNET.toLowerCase()) {
     return Network.DEVNET;
   }
@@ -164,6 +167,15 @@ function InvalidPage(props: { network: Network }) {
 function AppPage(props: { network: Network }) {
   return (
     <Fragment key={"app_page"}>
+      {props.network === Network.RANDOMNET && (
+        <AptosWalletAdapterProvider
+          plugins={RANDOMNET_WALLETS}
+          autoConnect={true}
+        >
+          <NavBar expectedNetwork={props.network} current={MARKETPLACE} />
+          <App expectedNetwork={props.network} />
+        </AptosWalletAdapterProvider>
+      )}
       {props.network === Network.DEVNET && (
         <AptosWalletAdapterProvider plugins={DEVNET_WALLETS} autoConnect={true}>
           <NavBar expectedNetwork={props.network} current={MARKETPLACE} />
@@ -196,6 +208,15 @@ export function WalletPage(props: { network: Network }) {
   const { walletAddress } = useParams();
   return (
     <Fragment key={"wallet_page"}>
+      {props.network === Network.RANDOMNET && (
+        <AptosWalletAdapterProvider
+          plugins={RANDOMNET_WALLETS}
+          autoConnect={true}
+        >
+          <NavBar expectedNetwork={props.network} current={WALLET} />
+          <Wallet network={props.network} walletAddress={walletAddress ?? ""} />
+        </AptosWalletAdapterProvider>
+      )}
       {props.network === Network.DEVNET && (
         <AptosWalletAdapterProvider plugins={DEVNET_WALLETS} autoConnect={true}>
           <NavBar expectedNetwork={props.network} current={WALLET} />
@@ -228,6 +249,15 @@ export function TokenPage(props: { network: Network }) {
   const { tokenId } = useParams();
   return (
     <Fragment key={"token_page"}>
+      {props.network === Network.RANDOMNET && (
+        <AptosWalletAdapterProvider
+          plugins={RANDOMNET_WALLETS}
+          autoConnect={true}
+        >
+          <NavBar expectedNetwork={props.network} current={WALLET} />
+          <TokenDetails network={props.network} tokenId={tokenId ?? ""} />
+        </AptosWalletAdapterProvider>
+      )}
       {props.network === Network.DEVNET && (
         <AptosWalletAdapterProvider plugins={DEVNET_WALLETS} autoConnect={true}>
           <NavBar expectedNetwork={props.network} current={WALLET} />
@@ -259,6 +289,15 @@ export function TokenPage(props: { network: Network }) {
 export function LaunchpadPage(props: { network: Network }) {
   return (
     <Fragment key={"launchpad_page"}>
+      {props.network === Network.RANDOMNET && (
+        <AptosWalletAdapterProvider
+          plugins={RANDOMNET_WALLETS}
+          autoConnect={true}
+        >
+          <NavBar expectedNetwork={props.network} current={LAUNCHPAD} />
+          <Launchpad expectedNetwork={props.network} />
+        </AptosWalletAdapterProvider>
+      )}
       {props.network === Network.DEVNET && (
         <AptosWalletAdapterProvider plugins={DEVNET_WALLETS} autoConnect={true}>
           <NavBar expectedNetwork={props.network} current={LAUNCHPAD} />

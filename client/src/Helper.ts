@@ -9,7 +9,9 @@ import { Aptos, AptosConfig, Network, ViewRequest } from "@aptos-labs/ts-sdk";
 /*
  * A helper central place for common code across components
  */
-
+export const RANDOMNET_PROVIDER = new Aptos(
+  new AptosConfig({ network: Network.RANDOMNET }),
+);
 export const DEVNET_PROVIDER = new Aptos(
   new AptosConfig({ network: Network.DEVNET }),
 );
@@ -36,6 +38,9 @@ export const getProvider = (network: Network) => {
   }
   if (network === Network.DEVNET) {
     return DEVNET_PROVIDER;
+  }
+  if (network === Network.RANDOMNET) {
+    return RANDOMNET_PROVIDER;
   }
   throw new Error("Unknown network type");
 };
