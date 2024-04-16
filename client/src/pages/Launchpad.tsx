@@ -13,7 +13,7 @@ import {
 import { EasyBorder, NetworkChecker } from "..";
 
 const DEFAULT_IMAGE =
-  "https://cloudflare-ipfs.com/ipfs/QmQ1b4JVoPETE9fLXkmGcXoheqJf2UZ4qTKKfvrmC2W4PF";
+  "ipfs://QmQ1b4JVoPETE9fLXkmGcXoheqJf2UZ4qTKKfvrmC2W4PF";
 
 const COLLECTION = "Collection";
 const TOKEN = "Token";

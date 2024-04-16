@@ -108,15 +108,15 @@ export const ensureImageUri = async (uri: string) => {
   if (!uri) {
     return uri;
   }
+
+  let newUri = ensureHttps(uri);
   try {
-    let newUri = uri;
     if (
       !uri.endsWith(".jpg") &&
       !uri.endsWith(".jpeg") &&
       !uri.endsWith(".png") &&
       !uri.endsWith(".svg")
     ) {
-      newUri = ensureHttps(uri);
       const response = await fetch(uri);
       const data = await response.json();
       if (data.image) {
@@ -128,7 +128,7 @@ export const ensureImageUri = async (uri: string) => {
   } catch (error: any) {
     // Let the URI stay as the old one for now
   }
-  return uri;
+  return newUri;
 };
 
 export const ensureHttps = (uri: string): string => {
